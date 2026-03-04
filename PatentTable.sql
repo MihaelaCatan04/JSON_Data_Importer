@@ -5,7 +5,7 @@ CREATE TABLE patent
     patent_type         VARCHAR(255),
     registration_number VARCHAR(255),
     application_date    DATE,
-    title               VARCHAR(255),
+    title               TEXT,
     url                 TEXT,
     FOREIGN KEY (corporate_number) REFERENCES company (corporate_number)
 )

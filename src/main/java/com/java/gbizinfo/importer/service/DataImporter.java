@@ -57,6 +57,7 @@ public class DataImporter {
 
     private void beginTransaction(ZipInputStream zis, String entryName) {
         try {
+            refreshSequences();
             transactionTemplate.executeWithoutResult(status -> {
                 processOrSkip(zis, entryName);
             });
@@ -83,6 +84,11 @@ public class DataImporter {
         } finally {
             CopyContext.clear();
         }
+    }
+    private void refreshSequences() {
+        CopyContext.setPatentSeq(dataMapper.getMaxPatentId());
+        CopyContext.setWorkplaceSeq(dataMapper.getMaxWorkplaceInfoId());
+        CopyContext.setFinanceSeq(dataMapper.getMaxFinanceId());
     }
 
 

@@ -4,7 +4,7 @@ CREATE TABLE procurement
     corporate_number       VARCHAR(13),
     date_of_order          TIMESTAMPTZ,
     title                  VARCHAR(255),
-    amount                 INTEGER,
+    amount                 BIGINT,
     government_departments VARCHAR(255),
     note                   TEXT,
     FOREIGN KEY (corporate_number) REFERENCES company (corporate_number)

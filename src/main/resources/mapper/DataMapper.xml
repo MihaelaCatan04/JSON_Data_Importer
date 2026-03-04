@@ -13,4 +13,13 @@
         INSERT INTO import_checkpoint (zip_entry_name)
         VALUES (#{entryName}) ON CONFLICT DO NOTHING
     </insert>
+    <select id="getMaxPatentId" resultType="long">
+        SELECT COALESCE(MAX(patent_id), 0) FROM patent
+    </select>
+    <select id="getMaxWorkplaceInfoId" resultType="long">
+        SELECT COALESCE(MAX(workplace_info_id), 0) FROM workplace_info
+    </select>
+    <select id="getMaxFinanceId" resultType="long">
+        SELECT COALESCE(MAX(finance_id), 0) FROM finance
+    </select>
 </mapper>

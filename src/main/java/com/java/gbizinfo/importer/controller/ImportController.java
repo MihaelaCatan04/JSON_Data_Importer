@@ -19,7 +19,10 @@ public class ImportController {
     @GetMapping("/import")
     public String importData() {
         try {
+            long startTime = System.nanoTime();
             dataImporter.importData();
+            long endTime = System.nanoTime();
+            log.info("Total duration: {}ns", endTime - startTime);
             return "Import successful!";
         } catch (Exception e) {
             log.error("Import failed", e);

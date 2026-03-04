@@ -10,4 +10,10 @@ public interface DataMapper {
     int copy(@Param("entryName") String entryName);
 
     void insertCheckpoint(@Param("entryName") String entryName);
+
+    long getMaxPatentId();
+
+    long getMaxWorkplaceInfoId();
+
+    long getMaxFinanceId();
 }

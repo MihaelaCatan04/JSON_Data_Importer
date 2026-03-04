@@ -6,7 +6,6 @@ import lombok.*;
 
 import java.util.List;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 @Setter
 @Getter
 @NoArgsConstructor
@@ -86,4 +85,25 @@ public class GbizCompany {
 
     @JsonProperty("business_items")
     private List<String> businessItems;
+
+    @JsonProperty("patent")
+    private List<Patent> patent;
+
+    @JsonProperty("certification")
+    private List<Certification> certification;
+
+    @JsonProperty("subsidy")
+    private List<Subsidy> subsidy;
+
+    @JsonProperty("workplace_info")
+    private List<WorkplaceInfo> workplaceInfo;
+
+    @JsonProperty("commendation")
+    private List<Commendation> commendation;
+
+    @JsonProperty("procurement")
+    private List<Procurement> procurement;
+
+    @JsonProperty("finance")
+    private List<Finance> finance;
 }

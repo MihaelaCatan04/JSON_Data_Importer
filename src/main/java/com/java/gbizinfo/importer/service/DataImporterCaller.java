@@ -14,5 +14,4 @@ public class DataImporterCaller {
         log.info("Trigger Data Import task");
         dataImporter.importData();
     }
-
 }

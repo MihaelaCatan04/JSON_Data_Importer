@@ -22,4 +22,7 @@
     <select id="getMaxFinanceId" resultType="long">
         SELECT COALESCE(MAX(finance_id), 0) FROM finance
     </select>
+    <select id="getMaxCompanyId" resultType="long">
+        SELECT COALESCE(MAX(company_id), 0) FROM company
+    </select>
 </mapper>

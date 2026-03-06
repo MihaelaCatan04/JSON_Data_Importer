@@ -8,6 +8,7 @@ public class CopyContext {
     private static final ThreadLocal<Long> PATENT_SEQ = new ThreadLocal<>();
     private static final ThreadLocal<Long> WORKPLACE_SEQ = new ThreadLocal<>();
     private static final ThreadLocal<Long> FINANCE_SEQ = new ThreadLocal<>();
+    private static final ThreadLocal<Long> COMPANY_SEQ = new ThreadLocal<>();
 
     public static void set(ZipInputStream zip) {
         ZIS.set(zip);
@@ -48,10 +49,18 @@ public class CopyContext {
         FINANCE_SEQ.set(seq);
     }
 
+    public static long getCompanySeq() {
+        if (COMPANY_SEQ.get() == null) {
+            return 0L;
+        }
+        return FINANCE_SEQ.get();
+    }
+
     public static void clear() {
         ZIS.remove();
         PATENT_SEQ.remove();
         WORKPLACE_SEQ.remove();
         FINANCE_SEQ.remove();
+        COMPANY_SEQ.remove();
     }
 }

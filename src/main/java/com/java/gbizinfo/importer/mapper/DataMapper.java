@@ -16,4 +16,6 @@ public interface DataMapper {
     long getMaxWorkplaceInfoId();
 
     long getMaxFinanceId();
+
+    long getMaxCompanyId();
 }

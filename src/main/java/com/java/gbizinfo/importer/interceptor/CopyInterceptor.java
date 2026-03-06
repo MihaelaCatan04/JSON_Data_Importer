@@ -34,6 +34,7 @@ public class CopyInterceptor implements Interceptor {
 
     private static final String COMPANY_COPY = """
             COPY company (
+                company_id,
                 corporate_number, name, kana, name_en, postal_code, location,
                 process, aggregated_year, status, close_date, close_status, kind,
                 representative_name, capital_stock, employee_number,
@@ -43,19 +44,19 @@ public class CopyInterceptor implements Interceptor {
             ) FROM STDIN WITH (FORMAT csv, NULL '')
             """;
 
-    private static final String INDUSTRY_COPY = "COPY industry (corporate_number, industry_type) FROM STDIN WITH (FORMAT csv, NULL '')";
+    private static final String INDUSTRY_COPY = "COPY industry (company_id, industry_type) FROM STDIN WITH (FORMAT csv, NULL '')";
 
-    private static final String BUSINESS_ITEM_COPY = "COPY business_item (corporate_number, item_type) FROM STDIN WITH (FORMAT csv, NULL '')";
+    private static final String BUSINESS_ITEM_COPY = "COPY business_item (company_id, item_type) FROM STDIN WITH (FORMAT csv, NULL '')";
 
-    private static final String PATENT_COPY = "COPY patent (patent_id, corporate_number, patent_type, registration_number, application_date, title, url) FROM STDIN WITH (FORMAT csv, NULL '')";
+    private static final String PATENT_COPY = "COPY patent (patent_id, company_id, patent_type, registration_number, application_date, title, url) FROM STDIN WITH (FORMAT csv, NULL '')";
 
     private static final String CLASSIFICATION_COPY = "COPY classification (patent_id, code_value, code_name, japanese) FROM STDIN WITH (FORMAT csv, NULL '')";
 
-    private static final String CERTIFICATION_COPY = "COPY certification (corporate_number, date_of_approval, title, target, government_departments, category) FROM STDIN WITH (FORMAT csv, NULL '')";
+    private static final String CERTIFICATION_COPY = "COPY certification (company_id, date_of_approval, title, target, government_departments, category) FROM STDIN WITH (FORMAT csv, NULL '')";
 
-    private static final String SUBSIDY_COPY = "COPY subsidy (corporate_number, date_of_approval, title, amount, target, government_departments) FROM STDIN WITH (FORMAT csv, NULL '')";
+    private static final String SUBSIDY_COPY = "COPY subsidy (company_id, date_of_approval, title, amount, target, government_departments) FROM STDIN WITH (FORMAT csv, NULL '')";
 
-    private static final String WORKPLACE_INFO_COPY = "COPY workplace_info (workplace_info_id, corporate_number) FROM STDIN WITH (FORMAT csv, NULL '')";
+    private static final String WORKPLACE_INFO_COPY = "COPY workplace_info (workplace_info_id, company_id) FROM STDIN WITH (FORMAT csv, NULL '')";
 
     private static final String BASE_INFO_COPY = "COPY base_info (workplace_info_id, average_continuous_service_years_type, average_continuous_service_years_male, average_continuous_service_years_female, average_continuous_service_years, average_age, month_average_predetermined_overtime_hours) FROM STDIN WITH (FORMAT csv, NULL '')";
 
@@ -63,21 +64,24 @@ public class CopyInterceptor implements Interceptor {
 
     private static final String COMPATIBILITY_OF_CHILDCARE_AND_WORK_COPY = "COPY compatibility_of_childcare_and_work (workplace_info_id, number_of_paternity_leave, number_of_maternity_leave, paternity_leave_acquisition_num, maternity_leave_acquisition_num) FROM STDIN WITH (FORMAT csv, NULL '')";
 
-    private static final String COMMENDATION_COPY = "COPY commendation (corporate_number, date_of_commendation, title, target, category, government_departments, note) FROM STDIN WITH (FORMAT csv, NULL '')";
+    private static final String COMMENDATION_COPY = "COPY commendation (company_id, date_of_commendation, title, target, category, government_departments, note) FROM STDIN WITH (FORMAT csv, NULL '')";
 
-    private static final String PROCUREMENT_COPY = "COPY procurement (corporate_number, date_of_order, title, amount, government_departments, note) FROM STDIN WITH (FORMAT csv, NULL '')";
+    private static final String PROCUREMENT_COPY = "COPY procurement (company_id, date_of_order, title, amount, government_departments, note) FROM STDIN WITH (FORMAT csv, NULL '')";
 
-    private static final String FINANCE_COPY = "COPY finance (finance_id, corporate_number, accounting_standards, fiscal_year_cover_page) FROM STDIN WITH (FORMAT csv, NULL '')";
+    private static final String FINANCE_COPY = "COPY finance (finance_id, company_id, accounting_standards, fiscal_year_cover_page) FROM STDIN WITH (FORMAT csv, NULL '')";
 
     private static final String MAJOR_SHAREHOLDER_COPY = "COPY major_shareholder (finance_id, name_major_stakeholders, shareholding_ratio) FROM STDIN WITH (FORMAT csv, NULL '')";
 
     private static final String MANAGEMENT_INDEX_COPY = "COPY management_index (finance_id, period, net_sales_summary_of_business_results, net_sales_summary_of_business_results_unit_ref, operating_revenue1_summary_of_business_results, operating_revenue1_summary_of_business_results_unit_ref, operating_revenue2_summary_of_business_results, operating_revenue2_summary_of_business_results_unit_ref, gross_operating_revenue_summary_of_business_results, gross_operating_revenue_summary_of_business_results_unit_ref, ordinary_income_summary_of_business_results, ordinary_income_summary_of_business_results_unit_ref, net_premiums_written_summary_of_business_results_ins, net_premiums_written_summary_of_business_results_ins_unit_ref, ordinary_income_loss_summary_of_business_results, ordinary_income_loss_summary_of_business_results_unit_ref, net_income_loss_summary_of_business_results, net_income_loss_summary_of_business_results_unit_ref, capital_stock_summary_of_business_results, capital_stock_summary_of_business_results_unit_ref, net_assets_summary_of_business_results, net_assets_summary_of_business_results_unit_ref, total_assets_summary_of_business_results, total_assets_summary_of_business_results_unit_ref, number_of_employees, number_of_employees_unit_ref) FROM STDIN WITH (FORMAT csv, NULL '')";
 
-    private static final ObjectMapper MAPPER = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY);
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY);
 
     private final AtomicLong patentIdSeq = new AtomicLong();
     private final AtomicLong workplaceIdSeq = new AtomicLong();
     private final AtomicLong financeIdSeq = new AtomicLong();
+    private final AtomicLong companyIdSeq = new AtomicLong();
 
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
@@ -105,6 +109,7 @@ public class CopyInterceptor implements Interceptor {
         patentIdSeq.set(CopyContext.getPatentSeq() + 1);
         workplaceIdSeq.set(CopyContext.getWorkplaceSeq() + 1);
         financeIdSeq.set(CopyContext.getFinanceSeq() + 1);
+        companyIdSeq.set(CopyContext.getCompanySeq() + 1);
     }
 
     private void executeCopy(PGConnection pgConn, ZipInputStream zip) throws Exception {
@@ -121,8 +126,8 @@ public class CopyInterceptor implements Interceptor {
     }
 
     private Long copyCompany(PGConnection pgConn, ZipInputStream zip, WriterCollection writers) throws Exception {
-        try (PGCopyOutputStream compStream = new PGCopyOutputStream(pgConn, COMPANY_COPY); BufferedWriter compWriter = createWriter(compStream)) {
-
+        try (PGCopyOutputStream compStream = new PGCopyOutputStream(pgConn, COMPANY_COPY);
+             BufferedWriter compWriter = createWriter(compStream)) {
             return processZip(zip, compWriter, writers);
         }
     }
@@ -169,7 +174,7 @@ public class CopyInterceptor implements Interceptor {
     }
 
     private Long processCompanies(MappingIterator<GbizCompany> it, BufferedWriter compOut, WriterCollection writerCollection) throws IOException {
-        Long count = 0L;
+        long count = 0L;
         while (it.hasNext()) {
             processSingleCompany(it.next(), compOut, writerCollection);
             count++;
@@ -177,29 +182,62 @@ public class CopyInterceptor implements Interceptor {
         return count;
     }
 
+    // companyId is assigned ONCE here and passed down to every child writer
     private void processSingleCompany(GbizCompany company, BufferedWriter compOut, WriterCollection writerCollection) throws IOException {
-        writeCompanyRow(compOut, company);
-        writeStringList(writerCollection.getIndWriter(), company.getCorporateNumber(), company.getIndustry());
-        writeStringList(writerCollection.getItemWriter(), company.getCorporateNumber(), company.getBusinessItems());
-        writePatents(writerCollection, company);
-        writeCertifications(writerCollection, company);
-        writeSubsidies(writerCollection, company);
-        writeCommendations(writerCollection, company);
-        writeProcurements(writerCollection, company);
-        writeWorkplaceInfos(writerCollection, company);
-        writeFinances(writerCollection, company);
+        Long companyId = companyIdSeq.getAndIncrement();
+        writeCompanyRow(compOut, company, companyId);
+        writeStringList(writerCollection.getIndWriter(), companyId, company.getIndustry());
+        writeStringList(writerCollection.getItemWriter(), companyId, company.getBusinessItems());
+        writePatents(writerCollection, company, companyId);
+        writeCertifications(writerCollection, company, companyId);
+        writeSubsidies(writerCollection, company, companyId);
+        writeCommendations(writerCollection, company, companyId);
+        writeProcurements(writerCollection, company, companyId);
+        writeWorkplaceInfos(writerCollection, company, companyId);
+        writeFinances(writerCollection, company, companyId);
     }
 
-    private void writeCompanyRow(BufferedWriter out, GbizCompany company) throws IOException {
-        out.write(String.join(",", csv(company.getCorporateNumber()), csv(company.getName()), csv(company.getKana()), csv(company.getNameEn()), csv(company.getPostalCode()), csv(company.getLocation()), csv(company.getProcess()), csv(company.getAggregatedYear()), csv(company.getStatus()), csv(company.getCloseDate()), csv(company.getCloseCause()), csv(company.getKind()), csv(company.getRepresentativeName()), csv(company.getCapitalStock()), csv(company.getEmployeeNumber()), csv(company.getCompanySizeMale()), csv(company.getCompanySizeFemale()), csv(company.getBusinessSummary()), csv(company.getCompanyUrl()), csv(company.getFoundingYear()), csv(company.getDateOfEstablishment()), csv(company.getQualificationGrade()), csv(company.getUpdateDate())));
+    private void writeCompanyRow(BufferedWriter out, GbizCompany company, Long companyId) throws IOException {
+        out.write(String.join(",",
+                csv(companyId),
+                csv(company.getCorporateNumber()),
+                csv(company.getName()),
+                csv(company.getKana()),
+                csv(company.getNameEn()),
+                csv(company.getPostalCode()),
+                csv(company.getLocation()),
+                csv(company.getProcess()),
+                csv(company.getAggregatedYear()),
+                csv(company.getStatus()),
+                csv(company.getCloseDate()),
+                csv(company.getCloseCause()),
+                csv(company.getKind()),
+                csv(company.getRepresentativeName()),
+                csv(company.getCapitalStock()),
+                csv(company.getEmployeeNumber()),
+                csv(company.getCompanySizeMale()),
+                csv(company.getCompanySizeFemale()),
+                csv(company.getBusinessSummary()),
+                csv(company.getCompanyUrl()),
+                csv(company.getFoundingYear()),
+                csv(company.getDateOfEstablishment()),
+                csv(company.getQualificationGrade()),
+                csv(company.getUpdateDate())));
         out.newLine();
     }
 
-    private void writePatents(WriterCollection writerCollection, GbizCompany company) throws IOException {
+    private void writePatents(WriterCollection writerCollection, GbizCompany company, Long companyId) throws IOException {
         if (company.getPatent() == null) return;
         for (Patent patent : company.getPatent()) {
             Long patentId = patentIdSeq.getAndIncrement();
-            writerCollection.getPatentWriter().write(String.join(",", csv(patentId), csv(company.getCorporateNumber()), csv(patent.getPatentType()), csv(patent.getRegistrationNumber()), csv(patent.getApplicationDate()), csv(patent.getTitle()), csv(patent.getUrl())));
+            writerCollection.getPatentWriter().write(String.join(",",
+                    csv(patentId),
+                    csv(companyId),
+                    csv(patent.getPatentType()),
+                    csv(patent.getRegistrationNumber()),
+                    csv(patent.getApplicationDate()),
+                    csv(patent.getTitle()),
+                    csv(patent.getUrl())));
             writerCollection.getPatentWriter().newLine();
 
             writeClassifications(writerCollection, patentId, patent.getClassifications());
@@ -209,63 +247,99 @@ public class CopyInterceptor implements Interceptor {
     private void writeClassifications(WriterCollection writerCollection, Long patentId, List<Classifications> list) throws IOException {
         if (list == null) return;
         for (Classifications classifications : list) {
-            writerCollection.getClassificationWriter().write(String.join(",", csv(patentId), csv(classifications.getCodeValue()), csv(classifications.getCodeName()), csv(classifications.getJapanese())));
+            writerCollection.getClassificationWriter().write(String.join(",",
+                    csv(patentId),
+                    csv(classifications.getCodeValue()),
+                    csv(classifications.getCodeName()),
+                    csv(classifications.getJapanese())));
             writerCollection.getClassificationWriter().newLine();
         }
     }
 
-    private void writeCertifications(WriterCollection writerCollection, GbizCompany company) throws IOException {
+    private void writeCertifications(WriterCollection writerCollection, GbizCompany company, Long companyId) throws IOException {
         if (company.getCertification() == null) return;
         for (Certification certification : company.getCertification()) {
-            writerCollection.getCertificationWriter().write(String.join(",", csv(company.getCorporateNumber()), csv(certification.getDateOfApproval()), csv(certification.getTitle()), csv(certification.getTarget()), csv(certification.getGovernmentDepartments()), csv(certification.getCategory())));
+            writerCollection.getCertificationWriter().write(String.join(",",
+                    csv(companyId),
+                    csv(certification.getDateOfApproval()),
+                    csv(certification.getTitle()),
+                    csv(certification.getTarget()),
+                    csv(certification.getGovernmentDepartments()),
+                    csv(certification.getCategory())));
             writerCollection.getCertificationWriter().newLine();
         }
     }
 
-    private void writeSubsidies(WriterCollection writerCollection, GbizCompany company) throws IOException {
+    private void writeSubsidies(WriterCollection writerCollection, GbizCompany company, Long companyId) throws IOException {
         if (company.getSubsidy() == null) return;
         for (Subsidy subsidy : company.getSubsidy()) {
-            writerCollection.getSubsidyWriter().write(String.join(",", csv(company.getCorporateNumber()), csv(subsidy.getDateOfApproval()), csv(subsidy.getTitle()), csv(subsidy.getAmount()), csv(subsidy.getTarget()), csv(subsidy.getGovernmentDepartments())));
+            writerCollection.getSubsidyWriter().write(String.join(",",
+                    csv(companyId),
+                    csv(subsidy.getDateOfApproval()),
+                    csv(subsidy.getTitle()),
+                    csv(subsidy.getAmount()),
+                    csv(subsidy.getTarget()),
+                    csv(subsidy.getGovernmentDepartments())));
             writerCollection.getSubsidyWriter().newLine();
         }
     }
 
-    private void writeCommendations(WriterCollection writerCollection, GbizCompany company) throws IOException {
+    private void writeCommendations(WriterCollection writerCollection, GbizCompany company, Long companyId) throws IOException {
         if (company.getCommendation() == null) return;
         for (Commendation commendation : company.getCommendation()) {
-            writerCollection.getCommendationWriter().write(String.join(",", csv(company.getCorporateNumber()), csv(commendation.getDateOfCommendation()), csv(commendation.getTitle()), csv(commendation.getTarget()), csv(commendation.getCategory()), csv(commendation.getGovernmentDepartments()), csv(commendation.getNote())));
+            writerCollection.getCommendationWriter().write(String.join(",",
+                    csv(companyId),
+                    csv(commendation.getDateOfCommendation()),
+                    csv(commendation.getTitle()),
+                    csv(commendation.getTarget()),
+                    csv(commendation.getCategory()),
+                    csv(commendation.getGovernmentDepartments()),
+                    csv(commendation.getNote())));
             writerCollection.getCommendationWriter().newLine();
         }
     }
 
-    private void writeProcurements(WriterCollection writerCollection, GbizCompany company) throws IOException {
+    private void writeProcurements(WriterCollection writerCollection, GbizCompany company, Long companyId) throws IOException {
         if (company.getProcurement() == null) return;
         for (Procurement procurement : company.getProcurement()) {
-            writerCollection.getProcurementWriter().write(String.join(",", csv(company.getCorporateNumber()), csv(procurement.getDateOfOrder()), csv(procurement.getTitle()), csv(procurement.getAmount()), csv(procurement.getGovernmentDepartments()), csv(procurement.getNote())));
+            writerCollection.getProcurementWriter().write(String.join(",",
+                    csv(companyId),
+                    csv(procurement.getDateOfOrder()),
+                    csv(procurement.getTitle()),
+                    csv(procurement.getAmount()),
+                    csv(procurement.getGovernmentDepartments()),
+                    csv(procurement.getNote())));
             writerCollection.getProcurementWriter().newLine();
         }
     }
 
-    private void writeWorkplaceInfos(WriterCollection writerCollection, GbizCompany company) throws IOException {
+    private void writeWorkplaceInfos(WriterCollection writerCollection, GbizCompany company, Long companyId) throws IOException {
         if (company.getWorkplaceInfo() == null) return;
         for (WorkplaceInfo workplaceInfo : company.getWorkplaceInfo()) {
             Long workplaceId = workplaceIdSeq.getAndIncrement();
-            writeWorkplaceInfoParent(writerCollection, company, workplaceId);
+            writeWorkplaceInfoParent(writerCollection, companyId, workplaceId);
             writeBaseInfo(writerCollection, workplaceInfo, workplaceId);
             writeWomenActivityInfo(writerCollection, workplaceInfo, workplaceId);
             writeCompatibilityOfChildcareAndWork(writerCollection, workplaceInfo, workplaceId);
         }
     }
 
-    private void writeWorkplaceInfoParent(WriterCollection writerCollection, GbizCompany company, Long workplaceId) throws IOException {
-        writerCollection.getWorkplaceWriter().write(String.join(",", csv(workplaceId), csv(company.getCorporateNumber())));
+    private void writeWorkplaceInfoParent(WriterCollection writerCollection, Long companyId, Long workplaceId) throws IOException {
+        writerCollection.getWorkplaceWriter().write(String.join(",", csv(workplaceId), csv(companyId)));
         writerCollection.getWorkplaceWriter().newLine();
     }
 
     private void writeBaseInfo(WriterCollection writerCollection, WorkplaceInfo workplaceInfo, Long workplaceId) throws IOException {
         BaseInfos baseInfos = workplaceInfo.getBaseInfos();
         if (baseInfos != null) {
-            writerCollection.getBaseInfoWriter().write(String.join(",", csv(workplaceId), csv(baseInfos.getAverageContinuousServiceYearsType()), csv(baseInfos.getAverageContinuousServiceYearsMale()), csv(baseInfos.getAverageContinuousServiceYearsFemale()), csv(baseInfos.getAverageContinuousServiceYears()), csv(baseInfos.getAverageAge()), csv(baseInfos.getMonthAveragePredeterminedOvertimeHours())));
+            writerCollection.getBaseInfoWriter().write(String.join(",",
+                    csv(workplaceId),
+                    csv(baseInfos.getAverageContinuousServiceYearsType()),
+                    csv(baseInfos.getAverageContinuousServiceYearsMale()),
+                    csv(baseInfos.getAverageContinuousServiceYearsFemale()),
+                    csv(baseInfos.getAverageContinuousServiceYears()),
+                    csv(baseInfos.getAverageAge()),
+                    csv(baseInfos.getMonthAveragePredeterminedOvertimeHours())));
             writerCollection.getBaseInfoWriter().newLine();
         }
     }
@@ -273,57 +347,100 @@ public class CopyInterceptor implements Interceptor {
     private void writeWomenActivityInfo(WriterCollection writerCollection, WorkplaceInfo workplaceInfo, Long workplaceId) throws IOException {
         WomenActivityInfos womenActivityInfos = workplaceInfo.getWomenActivityInfos();
         if (womenActivityInfos != null) {
-            writerCollection.getWomenActivityWriter().write(String.join(",", csv(workplaceId), csv(womenActivityInfos.getFemaleWorkersProportionType()), csv(womenActivityInfos.getFemaleWorkersProportion()), csv(womenActivityInfos.getFemaleShareOfManager()), csv(womenActivityInfos.getGenderTotalOfManager()), csv(womenActivityInfos.getFemaleShareOfOfficers()), csv(womenActivityInfos.getGenderTotalOfOfficers())));
+            writerCollection.getWomenActivityWriter().write(String.join(",",
+                    csv(workplaceId),
+                    csv(womenActivityInfos.getFemaleWorkersProportionType()),
+                    csv(womenActivityInfos.getFemaleWorkersProportion()),
+                    csv(womenActivityInfos.getFemaleShareOfManager()),
+                    csv(womenActivityInfos.getGenderTotalOfManager()),
+                    csv(womenActivityInfos.getFemaleShareOfOfficers()),
+                    csv(womenActivityInfos.getGenderTotalOfOfficers())));
             writerCollection.getWomenActivityWriter().newLine();
         }
     }
 
     private void writeCompatibilityOfChildcareAndWork(WriterCollection writerCollection, WorkplaceInfo workplaceInfo, Long workplaceId) throws IOException {
-        CompatibilityOfChildcareAndWork compatibilityOfChildcareAndWork = workplaceInfo.getCompatibilityOfChildcareAndWork();
-        if (compatibilityOfChildcareAndWork != null) {
-            writerCollection.getCompatChildWorkWriter().write(String.join(",", csv(workplaceId), csv(compatibilityOfChildcareAndWork.getNumberOfPaternityLeave()), csv(compatibilityOfChildcareAndWork.getNumberOfMaternityLeave()), csv(compatibilityOfChildcareAndWork.getPaternityLeaveAcquisitionNum()), csv(compatibilityOfChildcareAndWork.getMaternityLeaveAcquisitionNum())));
+        CompatibilityOfChildcareAndWork compat = workplaceInfo.getCompatibilityOfChildcareAndWork();
+        if (compat != null) {
+            writerCollection.getCompatChildWorkWriter().write(String.join(",",
+                    csv(workplaceId),
+                    csv(compat.getNumberOfPaternityLeave()),
+                    csv(compat.getNumberOfMaternityLeave()),
+                    csv(compat.getPaternityLeaveAcquisitionNum()),
+                    csv(compat.getMaternityLeaveAcquisitionNum())));
             writerCollection.getCompatChildWorkWriter().newLine();
         }
     }
 
-    private void writeFinances(WriterCollection writerCollection, GbizCompany company) throws IOException {
+    private void writeFinances(WriterCollection writerCollection, GbizCompany company, Long companyId) throws IOException {
         if (company.getFinance() == null) return;
         for (Finance finance : company.getFinance()) {
             Long financeId = financeIdSeq.getAndIncrement();
-            writeFinance(writerCollection, finance, financeId, company);
+            writeFinance(writerCollection, finance, financeId, companyId);
             writeManagementIndex(finance, writerCollection, financeId);
             writeMajorShareholders(finance, writerCollection, financeId);
         }
     }
 
-    private void writeFinance(WriterCollection writerCollection, Finance finance, Long financeId, GbizCompany company) throws IOException {
-        writerCollection.getFinanceWriter().write(String.join(",", csv(financeId), csv(company.getCorporateNumber()), csv(finance.getAccountingStandards()), csv(finance.getFiscalYearCoverPage())));
+    private void writeFinance(WriterCollection writerCollection, Finance finance, Long financeId, Long companyId) throws IOException {
+        writerCollection.getFinanceWriter().write(String.join(",",
+                csv(financeId),
+                csv(companyId),
+                csv(finance.getAccountingStandards()),
+                csv(finance.getFiscalYearCoverPage())));
         writerCollection.getFinanceWriter().newLine();
     }
 
     private void writeManagementIndex(Finance finance, WriterCollection writerCollection, Long financeId) throws IOException {
-        if (finance.getManagementIndex() != null) {
-            for (ManagementIndex managementIndex : finance.getManagementIndex()) {
-                writerCollection.getManagementIndexWriter().write(String.join(",", csv(financeId), csv(managementIndex.getPeriod()), csv(managementIndex.getNetSalesSummaryOfBusinessResults()), csv(managementIndex.getNetSalesSummaryOfBusinessResultsUnitRef()), csv(managementIndex.getOperatingRevenue1SummaryOfBusinessResults()), csv(managementIndex.getOperatingRevenue1SummaryOfBusinessResultsUnitRef()), csv(managementIndex.getOperatingRevenue2SummaryOfBusinessResults()), csv(managementIndex.getOperatingRevenue2SummaryOfBusinessResultsUnitRef()), csv(managementIndex.getGrossOperatingRevenueSummaryOfBusinessResults()), csv(managementIndex.getGrossOperatingRevenueSummaryOfBusinessResultsUnitRef()), csv(managementIndex.getOrdinaryIncomeSummaryOfBusinessResults()), csv(managementIndex.getOrdinaryIncomeSummaryOfBusinessResultsUnitRef()), csv(managementIndex.getNetPremiumsWrittenSummaryOfBusinessResultIns()), csv(managementIndex.getNetPremiumsWrittenSummaryOfBusinessResultsInsUnitRef()), csv(managementIndex.getOrdinaryIncomeLossSummaryOfBusinessResults()), csv(managementIndex.getOrdinaryIncomeLossSummaryOfBusinessResultsUnitRef()), csv(managementIndex.getNetIncomeLossSummaryOfBusinessResults()), csv(managementIndex.getNetIncomeLossSummaryOfBusinessResultsUnitRef()), csv(managementIndex.getCapitalStockSummaryOfBusinessResults()), csv(managementIndex.getCapitalStockSummaryOfBusinessResultsUnitRef()), csv(managementIndex.getNetAssetsSummaryOfBusinessResults()), csv(managementIndex.getNetAssetsSummaryOfBusinessResultsUnitRef()), csv(managementIndex.getTotalAssetsSummaryOfBusinessResults()), csv(managementIndex.getTotalAssetsSummaryOfBusinessResultsUnitRef()), csv(managementIndex.getNumberOfEmployees()), csv(managementIndex.getNumberOfEmployeesUnitRef())));
-                writerCollection.getManagementIndexWriter().newLine();
-            }
+        if (finance.getManagementIndex() == null) return;
+        for (ManagementIndex managementIndex : finance.getManagementIndex()) {
+            writerCollection.getManagementIndexWriter().write(String.join(",",
+                    csv(financeId),
+                    csv(managementIndex.getPeriod()),
+                    csv(managementIndex.getNetSalesSummaryOfBusinessResults()),
+                    csv(managementIndex.getNetSalesSummaryOfBusinessResultsUnitRef()),
+                    csv(managementIndex.getOperatingRevenue1SummaryOfBusinessResults()),
+                    csv(managementIndex.getOperatingRevenue1SummaryOfBusinessResultsUnitRef()),
+                    csv(managementIndex.getOperatingRevenue2SummaryOfBusinessResults()),
+                    csv(managementIndex.getOperatingRevenue2SummaryOfBusinessResultsUnitRef()),
+                    csv(managementIndex.getGrossOperatingRevenueSummaryOfBusinessResults()),
+                    csv(managementIndex.getGrossOperatingRevenueSummaryOfBusinessResultsUnitRef()),
+                    csv(managementIndex.getOrdinaryIncomeSummaryOfBusinessResults()),
+                    csv(managementIndex.getOrdinaryIncomeSummaryOfBusinessResultsUnitRef()),
+                    csv(managementIndex.getNetPremiumsWrittenSummaryOfBusinessResultIns()),
+                    csv(managementIndex.getNetPremiumsWrittenSummaryOfBusinessResultsInsUnitRef()),
+                    csv(managementIndex.getOrdinaryIncomeLossSummaryOfBusinessResults()),
+                    csv(managementIndex.getOrdinaryIncomeLossSummaryOfBusinessResultsUnitRef()),
+                    csv(managementIndex.getNetIncomeLossSummaryOfBusinessResults()),
+                    csv(managementIndex.getNetIncomeLossSummaryOfBusinessResultsUnitRef()),
+                    csv(managementIndex.getCapitalStockSummaryOfBusinessResults()),
+                    csv(managementIndex.getCapitalStockSummaryOfBusinessResultsUnitRef()),
+                    csv(managementIndex.getNetAssetsSummaryOfBusinessResults()),
+                    csv(managementIndex.getNetAssetsSummaryOfBusinessResultsUnitRef()),
+                    csv(managementIndex.getTotalAssetsSummaryOfBusinessResults()),
+                    csv(managementIndex.getTotalAssetsSummaryOfBusinessResultsUnitRef()),
+                    csv(managementIndex.getNumberOfEmployees()),
+                    csv(managementIndex.getNumberOfEmployeesUnitRef())));
+            writerCollection.getManagementIndexWriter().newLine();
         }
     }
 
     private void writeMajorShareholders(Finance finance, WriterCollection writerCollection, Long financeId) throws IOException {
-        if (finance.getMajorShareholders() != null) {
-            for (MajorShareholders majorShareholders : finance.getMajorShareholders()) {
-                writerCollection.getMajorShareholderWriter().write(String.join(",", csv(financeId), csv(majorShareholders.getNameMajorShareholders()), csv(majorShareholders.getShareholdingRatio())));
-                writerCollection.getMajorShareholderWriter().newLine();
-            }
+        if (finance.getMajorShareholders() == null) return;
+        for (MajorShareholders majorShareholders : finance.getMajorShareholders()) {
+            writerCollection.getMajorShareholderWriter().write(String.join(",",
+                    csv(financeId),
+                    csv(majorShareholders.getNameMajorShareholders()),
+                    csv(majorShareholders.getShareholdingRatio())));
+            writerCollection.getMajorShareholderWriter().newLine();
         }
     }
 
-    private void writeStringList(BufferedWriter out, String corpNum, List<String> values) throws IOException {
+    private void writeStringList(BufferedWriter out, Long companyId, List<String> values) throws IOException {
         if (values == null || values.isEmpty()) return;
-        String escapedNum = csv(corpNum);
+        String escapedId = csv(companyId);
         for (String val : values) {
-            out.write(escapedNum);
+            out.write(escapedId);
             out.write(",");
             out.write(csv(val));
             out.newLine();

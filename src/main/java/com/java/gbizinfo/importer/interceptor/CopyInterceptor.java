@@ -410,12 +410,16 @@ public class CopyInterceptor implements Interceptor {
         for (String table : CHILD_TABLES) {
             String sql = String.format(DELETE_SQL_TEMPLATE, table);
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setArray(1, sqlArray);
-                int deleted = ps.executeUpdate();
-                if (deleted > 0) {
-                    log.debug("Deleted {} stale rows from {} for {} changed companies.", deleted, table, companyIds.size());
-                }
+                executeDelete(ps, sqlArray, table, companyIds);
             }
+        }
+    }
+
+    private void executeDelete(PreparedStatement ps, Array sqlArray, String table, List<Long> companyIds) throws SQLException {
+        ps.setArray(1, sqlArray);
+        int deleted = ps.executeUpdate();
+        if (deleted > 0) {
+            log.debug("Deleted {} stale rows from {} for {} changed companies.", deleted, table, companyIds.size());
         }
     }
 

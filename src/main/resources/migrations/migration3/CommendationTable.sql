@@ -4,7 +4,7 @@ CREATE TABLE commendation
     company_id             BIGINT,
     date_of_commendation   DATE,
     title                  VARCHAR(255),
-    target                 VARCHAR(255),
+    target                 TEXT,
     category               VARCHAR(255),
     government_departments VARCHAR(255),
     note                   TEXT,

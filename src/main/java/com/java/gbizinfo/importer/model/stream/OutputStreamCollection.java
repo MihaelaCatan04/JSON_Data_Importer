@@ -7,8 +7,7 @@ import java.io.ByteArrayOutputStream;
 @Getter
 public class OutputStreamCollection {
 
-    private final ByteArrayOutputStream indBuf;
-    private final ByteArrayOutputStream itemBuf;
+    private final ByteArrayOutputStream companyItemBuf;
     private final ByteArrayOutputStream patentBuf;
     private final ByteArrayOutputStream classificationBuf;
     private final ByteArrayOutputStream certificationBuf;
@@ -24,8 +23,7 @@ public class OutputStreamCollection {
     private final ByteArrayOutputStream managementIndexBuf;
 
     public OutputStreamCollection() {
-        this.indBuf = new ByteArrayOutputStream();
-        this.itemBuf = new ByteArrayOutputStream();
+        this.companyItemBuf = new ByteArrayOutputStream();
         this.patentBuf = new ByteArrayOutputStream();
         this.classificationBuf = new ByteArrayOutputStream();
         this.certificationBuf = new ByteArrayOutputStream();

@@ -45,8 +45,10 @@ public class CopyInterceptor implements Interceptor {
             ) FROM STDIN WITH (FORMAT csv, NULL '')
             """;
 
-    private static final String INDUSTRY_COPY = "COPY industry (company_id, industry_type) FROM STDIN WITH (FORMAT csv, NULL '')";
-    private static final String BUSINESS_ITEM_COPY = "COPY business_item (company_id, item_type) FROM STDIN WITH (FORMAT csv, NULL '')";
+    private static final String ITEM_INFO_COPY = "COPY item_info (info_id, value, is_industry) FROM STDIN WITH (FORMAT csv, NULL '')";
+    private static final String COMPANY_ITEM_COPY = "COPY company_item (company_id, info_id) FROM STDIN WITH (FORMAT csv, NULL '')";
+    private static final String SELECT_ITEM_INFO = "SELECT info_id, value, is_industry FROM item_info";
+
     private static final String PATENT_COPY = "COPY patent (patent_id, company_id, patent_type, registration_number, application_date, title, url) FROM STDIN WITH (FORMAT csv, NULL '')";
     private static final String CLASSIFICATION_COPY = "COPY classification (patent_id, code_value, code_name, japanese) FROM STDIN WITH (FORMAT csv, NULL '')";
     private static final String CERTIFICATION_COPY = "COPY certification (company_id, date_of_approval, title, target, government_departments, category) FROM STDIN WITH (FORMAT csv, NULL '')";
@@ -73,7 +75,7 @@ public class CopyInterceptor implements Interceptor {
             WHERE company_id = ?
             """;
 
-    private static final List<String> CHILD_TABLES = List.of("industry", "business_item", "patent", "certification", "subsidy", "commendation", "procurement", "workplace_info", "finance");
+    private static final List<String> CHILD_TABLES = List.of("company_item", "patent", "certification", "subsidy", "commendation", "procurement", "workplace_info", "finance");
 
     private static final String DELETE_SQL_TEMPLATE = "DELETE FROM %s WHERE company_id = ANY(?)";
     private static final String SELECT_VAL = "SELECT nextval(?) FROM generate_series(1, ?)";
@@ -84,6 +86,7 @@ public class CopyInterceptor implements Interceptor {
     private static final String PATENT_ID_SEQ = "patent_id_seq";
     private static final String WORKPLACE_INFO_ID_SEQ = "workplace_info_id_seq";
     private static final String FINANCE_ID_SEQ = "finance_id_seq";
+    private static final String ITEM_INFO_ID_SEQ = "item_info_id_seq";
 
     private static IdCursor companyIdCursor;
     private static IdCursor patentIdCursor;
@@ -118,14 +121,94 @@ public class CopyInterceptor implements Interceptor {
 
         List<GbizCompany> combinedData = combineNewAndChanged(result);
 
+        Map<String, Long> infoCache = loadInfoCache(conn);
+        registerNewInfoValues(conn, combinedData, infoCache);
+
         initializeIdCursors(conn, result, combinedData);
 
         OutputStreamCollection streams = new OutputStreamCollection();
         WriterCollection writers = new WriterCollection(streams);
 
-        processCompanies(pgConn, conn, result, writers);
+        processCompanies(pgConn, conn, result, writers, infoCache);
 
         finalizeCopy(pgConn, conn, result, writers, streams);
+    }
+
+    private String infoKey(boolean isIndustry, String value) {
+        return isIndustry + ":" + value;
+    }
+
+    private Map<String, Long> loadInfoCache(Connection conn) throws SQLException {
+        Map<String, Long> cache = new HashMap<>();
+        try (PreparedStatement ps = conn.prepareStatement(SELECT_ITEM_INFO); ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                long infoId = rs.getLong("info_id");
+                String value = rs.getString("value");
+                boolean isIndustry = rs.getBoolean("is_industry");
+                cache.put(infoKey(isIndustry, value), infoId);
+            }
+        }
+        return cache;
+    }
+
+    private void registerNewInfoValues(Connection conn,
+                                       List<GbizCompany> companies,
+                                       Map<String, Long> infoCache) throws Exception {
+        LinkedHashMap<String, Boolean> newEntries = collectNewEntries(companies, infoCache);
+
+        if (newEntries.isEmpty()) {
+            log.info("No new item_info entries needed.");
+            return;
+        }
+
+        IdCursor infoIdCursor = fetchIds(conn, ITEM_INFO_ID_SEQ, newEntries.size());
+        writeEntries(conn, newEntries, infoIdCursor, infoCache);
+    }
+
+    private LinkedHashMap<String, Boolean> collectNewEntries(List<GbizCompany> companies,
+                                                             Map<String, Long> infoCache) {
+        LinkedHashMap<String, Boolean> newEntries = new LinkedHashMap<>();
+        for (GbizCompany c : companies) {
+            collectNewInfo(c.getIndustry(), true, infoCache, newEntries);
+            collectNewInfo(c.getBusinessItems(), false, infoCache, newEntries);
+        }
+        return newEntries;
+    }
+
+    private void writeEntries(Connection conn,
+                              LinkedHashMap<String, Boolean> newEntries,
+                              IdCursor infoIdCursor,
+                              Map<String, Long> infoCache) throws Exception {
+        PGConnection pgConn = conn.unwrap(PGConnection.class);
+        try (PGCopyOutputStream out = new PGCopyOutputStream(pgConn, ITEM_INFO_COPY);
+             BufferedWriter w = createWriter(out)) {
+
+            for (Map.Entry<String, Boolean> entry : newEntries.entrySet()) {
+                long infoId = infoIdCursor.moveNext();
+                boolean isIndustry = entry.getValue();
+                String value = extractValue(entry.getKey());
+
+                w.write(String.join(",", csv(infoId), csv(value), csv(isIndustry)));
+                w.newLine();
+
+                infoCache.put(entry.getKey(), infoId);
+            }
+        }
+    }
+
+    private String extractValue(String rawKey) {
+        return rawKey.substring(rawKey.indexOf(':') + 1);
+    }
+
+
+    private void collectNewInfo(List<String> values, boolean isIndustry, Map<String, Long> cache, LinkedHashMap<String, Boolean> newEntries) {
+        if (values == null) return;
+        for (String v : values) {
+            if (v == null || v.isBlank()) continue;
+            String key = infoKey(isIndustry, v);
+            if (cache.containsKey(key) && newEntries.containsKey(key)) continue;
+            newEntries.put(key, isIndustry);
+        }
     }
 
     private CompanyProcessingResult classify(List<GbizCompany> companies, Map<String, ExistingCompany> existing) {
@@ -147,9 +230,9 @@ public class CopyInterceptor implements Interceptor {
         financeIdCursor = fetchIds(conn, FINANCE_ID_SEQ, countFinances(combinedData));
     }
 
-    private void processCompanies(PGConnection pgConn, Connection conn, CompanyProcessingResult result, WriterCollection writers) throws Exception {
-        processNewCompanies(pgConn, result.getNewCompanies(), writers);
-        processChangedCompanies(conn, result.getChangedCompanies(), writers);
+    private void processCompanies(PGConnection pgConn, Connection conn, CompanyProcessingResult result, WriterCollection writers, Map<String, Long> infoCache) throws Exception {
+        processNewCompanies(pgConn, result.getNewCompanies(), writers, infoCache);
+        processChangedCompanies(conn, result.getChangedCompanies(), writers, infoCache);
     }
 
     private void finalizeCopy(PGConnection pgConn, Connection conn, CompanyProcessingResult result, WriterCollection writers, OutputStreamCollection streams) throws Exception {
@@ -168,11 +251,7 @@ public class CopyInterceptor implements Interceptor {
 
             ResultSet rs = ps.executeQuery();
             List<Long> ids = new ArrayList<>(count);
-
-            while (rs.next()) {
-                ids.add(rs.getLong(1));
-            }
-
+            while (rs.next()) ids.add(rs.getLong(1));
             return new IdCursor(ids);
         }
     }
@@ -225,14 +304,25 @@ public class CopyInterceptor implements Interceptor {
         log.info("New: {}, changed: {}, unchanged (skipped): {}", result.getNewCompanies().size(), result.getChangedCompanies().size(), result.getSkipped());
     }
 
-    private void processNewCompanies(PGConnection pgConn, List<GbizCompany> newCompanies, WriterCollection writers) throws Exception {
-        copyNewCompanies(pgConn, newCompanies, writers);
+    private void processNewCompanies(PGConnection pgConn, List<GbizCompany> newCompanies, WriterCollection writers, Map<String, Long> infoCache) throws Exception {
+        if (newCompanies.isEmpty()) return;
+
+        try (PGCopyOutputStream compStream = new PGCopyOutputStream(pgConn, COMPANY_COPY); BufferedWriter compWriter = createWriter(compStream)) {
+
+            for (GbizCompany company : newCompanies) {
+                long companyId = companyIdCursor.moveNext();
+                OffsetDateTime updatedAt = resolveMaxLastUpdateDate(company);
+                writeCompanyRow(compWriter, company, companyId, updatedAt);
+                writeAllChildren(writers, company, companyId, infoCache);
+            }
+        }
+        log.info("Inserted {} new companies via COPY.", newCompanies.size());
     }
 
-    private void processChangedCompanies(Connection conn, List<ChangedCompany> changedCompanies, WriterCollection writers) throws SQLException, IOException {
+    private void processChangedCompanies(Connection conn, List<ChangedCompany> changedCompanies, WriterCollection writers, Map<String, Long> infoCache) throws SQLException, IOException {
         for (ChangedCompany cc : changedCompanies) {
             updateCompanyRow(conn, cc);
-            writeAllChildren(writers, cc.getData(), cc.getCompanyId());
+            writeAllChildren(writers, cc.getData(), cc.getCompanyId(), infoCache);
         }
     }
 
@@ -283,22 +373,6 @@ public class CopyInterceptor implements Interceptor {
         return map;
     }
 
-
-    private void copyNewCompanies(PGConnection pgConn, List<GbizCompany> newCompanies, WriterCollection writers) throws Exception {
-        if (newCompanies.isEmpty()) return;
-
-        try (PGCopyOutputStream compStream = new PGCopyOutputStream(pgConn, COMPANY_COPY); BufferedWriter compWriter = createWriter(compStream)) {
-
-            for (GbizCompany company : newCompanies) {
-                long companyId = companyIdCursor.moveNext();
-                OffsetDateTime updatedAt = resolveMaxLastUpdateDate(company);
-                writeCompanyRow(compWriter, company, companyId, updatedAt);
-                writeAllChildren(writers, company, companyId);
-            }
-        }
-        log.info("Inserted {} new companies via COPY.", newCompanies.size());
-    }
-
     private void updateCompanyRow(Connection conn, ChangedCompany cc) throws SQLException {
         GbizCompany c = cc.getData();
         try (PreparedStatement ps = conn.prepareStatement(UPDATE_COMPANY)) {
@@ -345,9 +419,10 @@ public class CopyInterceptor implements Interceptor {
         }
     }
 
-    private void writeAllChildren(WriterCollection writers, GbizCompany company, long companyId) throws IOException {
-        writeStringList(writers.getIndWriter(), companyId, company.getIndustry());
-        writeStringList(writers.getItemWriter(), companyId, company.getBusinessItems());
+
+    private void writeAllChildren(WriterCollection writers, GbizCompany company, long companyId, Map<String, Long> infoCache) throws IOException {
+        writeCompanyItems(writers.getCompanyItemWriter(), companyId, company.getIndustry(), true, infoCache);
+        writeCompanyItems(writers.getCompanyItemWriter(), companyId, company.getBusinessItems(), false, infoCache);
         writePatents(writers, company, companyId);
         writeCertifications(writers, company, companyId);
         writeSubsidies(writers, company, companyId);
@@ -357,9 +432,25 @@ public class CopyInterceptor implements Interceptor {
         writeFinances(writers, company, companyId);
     }
 
+    private void writeCompanyItems(BufferedWriter out, long companyId, List<String> values, boolean isIndustry, Map<String, Long> infoCache) throws IOException {
+        if (values == null || values.isEmpty()) return;
+        String escapedId = csv(companyId);
+        for (String val : values) {
+            if (val == null || val.isBlank()) continue;
+            Long infoId = infoCache.get(infoKey(isIndustry, val));
+            if (infoId == null) {
+                log.warn("Meta ID not found for isIndustry={} value='{}' — skipping row.", isIndustry, val);
+                continue;
+            }
+            out.write(escapedId);
+            out.write(",");
+            out.write(csv(infoId));
+            out.newLine();
+        }
+    }
+
     private void copyBufferedStreams(PGConnection pgConn, OutputStreamCollection s) throws Exception {
-        writeBuffer(pgConn, INDUSTRY_COPY, s.getIndBuf());
-        writeBuffer(pgConn, BUSINESS_ITEM_COPY, s.getItemBuf());
+        writeBuffer(pgConn, COMPANY_ITEM_COPY, s.getCompanyItemBuf());
         writeBuffer(pgConn, PATENT_COPY, s.getPatentBuf());
         writeBuffer(pgConn, CLASSIFICATION_COPY, s.getClassificationBuf());
         writeBuffer(pgConn, CERTIFICATION_COPY, s.getCertificationBuf());
@@ -495,17 +586,6 @@ public class CopyInterceptor implements Interceptor {
         for (MajorShareholders ms : finance.getMajorShareholders()) {
             w.getMajorShareholderWriter().write(String.join(",", csv(financeId), csv(ms.getNameMajorShareholders()), csv(ms.getShareholdingRatio())));
             w.getMajorShareholderWriter().newLine();
-        }
-    }
-
-    private void writeStringList(BufferedWriter out, long companyId, List<String> values) throws IOException {
-        if (values == null || values.isEmpty()) return;
-        String escapedId = csv(companyId);
-        for (String val : values) {
-            out.write(escapedId);
-            out.write(",");
-            out.write(csv(val));
-            out.newLine();
         }
     }
 

@@ -8,8 +8,7 @@ import java.nio.charset.StandardCharsets;
 
 @Getter
 public class WriterCollection {
-    private final BufferedWriter indWriter;
-    private final BufferedWriter itemWriter;
+    private final BufferedWriter companyItemWriter;
     private final BufferedWriter patentWriter;
     private final BufferedWriter classificationWriter;
     private final BufferedWriter certificationWriter;
@@ -25,8 +24,7 @@ public class WriterCollection {
     private final BufferedWriter managementIndexWriter;
 
     public WriterCollection(OutputStreamCollection s) {
-        this.indWriter = getWriter(s.getIndBuf());
-        this.itemWriter = getWriter(s.getItemBuf());
+        this.companyItemWriter = getWriter(s.getCompanyItemBuf());
         this.patentWriter = getWriter(s.getPatentBuf());
         this.classificationWriter = getWriter(s.getClassificationBuf());
         this.certificationWriter = getWriter(s.getCertificationBuf());
@@ -47,8 +45,7 @@ public class WriterCollection {
     }
 
     public void flushAll() throws IOException {
-        indWriter.flush();
-        itemWriter.flush();
+        companyItemWriter.flush();
         patentWriter.flush();
         classificationWriter.flush();
         certificationWriter.flush();

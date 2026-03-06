@@ -11,5 +11,4 @@ public class GBizInfoJsonImporterApplication {
     static void main(String[] args) {
         SpringApplication.run(GBizInfoJsonImporterApplication.class, args);
     }
-
 }

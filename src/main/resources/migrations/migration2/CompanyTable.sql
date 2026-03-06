@@ -1,6 +1,7 @@
 CREATE TABLE company
 (
-    corporate_number      VARCHAR(13) PRIMARY KEY NOT NULL UNIQUE,
+    company_id            BIGINT DEFAULT nextval('company_id_seq') PRIMARY KEY,
+    corporate_number      VARCHAR(13) UNIQUE,
     name                  VARCHAR(255),
     kana                  VARCHAR(255),
     name_en               VARCHAR(255),
@@ -22,5 +23,6 @@ CREATE TABLE company
     founding_year         INTEGER,
     date_of_establishment DATE,
     qualification_grade   VARCHAR(255),
-    update_date           TIMESTAMPTZ
-)
+    update_date           TIMESTAMPTZ,
+    updated_at            TIMESTAMPTZ
+);

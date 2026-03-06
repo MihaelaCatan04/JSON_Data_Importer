@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -20,7 +21,7 @@ import java.util.zip.ZipInputStream;
 public class DataImporter {
 
     private static final String URL = "https://info.gbiz.go.jp/hojin/Download";
-    private static final String PARAMS_TEMPLATE = "apiToken=%s&downfile=Hojinjoho&meta=&downenc=UTF-8&isZip=on&downtype=zip";
+    private static final String PARAMS_TEMPLATE = "apiToken=%s&downfile=Hojinjoho&meta=META&downenc=UTF-8&isZip=on&downtype=zip";
 
     @Value("${apiToken}")
     private String apiToken;
@@ -32,22 +33,27 @@ public class DataImporter {
     private TransactionTemplate transactionTemplate;
 
     public void importData() throws Exception {
+        String runId = UUID.randomUUID().toString();
+        log.info("Starting import run {}", runId);
+
         HttpURLConnection http = openConnection();
         http.getOutputStream().write(buildParams().getBytes(StandardCharsets.UTF_8));
 
         try (ZipInputStream zis = new ZipInputStream(http.getInputStream())) {
-            selectJsonFiles(zis);
+            selectJsonFiles(zis, runId);
         } finally {
             http.disconnect();
         }
+
+        log.info("Import run {} complete.", runId);
     }
 
-    private void selectJsonFiles(ZipInputStream zis) throws IOException {
+    private void selectJsonFiles(ZipInputStream zis, String runId) throws IOException {
         ZipEntry entry;
         while ((entry = zis.getNextEntry()) != null) {
             String name = entry.getName();
             if (name.endsWith(".json")) {
-                beginTransaction(zis, name);
+                beginTransaction(zis, name, runId);
             } else {
                 log.debug("Skipping non-JSON entry: {}", name);
             }
@@ -55,49 +61,40 @@ public class DataImporter {
         }
     }
 
-    private void beginTransaction(ZipInputStream zis, String entryName) {
+    private void beginTransaction(ZipInputStream zis, String entryName, String runId) {
         try {
-            refreshSequences();
             transactionTemplate.executeWithoutResult(status -> {
-                processOrSkip(zis, entryName);
+                processOrSkip(zis, entryName, runId);
             });
             log.info("Committed entry: {}", entryName);
-
         } catch (Exception e) {
             log.error("Failed on entry '{}' — rolled back. Will retry on next run.", entryName, e);
         }
     }
 
-    private void processOrSkip(ZipInputStream zis, String entryName) {
-        if (dataMapper.getTimesCheckpointed(entryName) > 0) {
-            log.info("Skipping already-processed entry: {}", entryName);
+    private void processOrSkip(ZipInputStream zis, String entryName, String runId) {
+        if (dataMapper.getTimesCheckpointed(runId, entryName) > 0) {
+            log.info("Skipping already-processed entry in this run: {}", entryName);
             return;
         }
-        processSingleEntry(zis, entryName);
+        processSingleEntry(zis, entryName, runId);
     }
 
-    private void processSingleEntry(ZipInputStream zis, String entryName) {
+    private void processSingleEntry(ZipInputStream zis, String entryName, String runId) {
         CopyContext.set(zis);
         try {
             dataMapper.copy(entryName);
-            dataMapper.insertCheckpoint(entryName);
+            dataMapper.insertCheckpoint(runId, entryName);
         } finally {
             CopyContext.clear();
         }
     }
-    private void refreshSequences() {
-        CopyContext.setPatentSeq(dataMapper.getMaxPatentId());
-        CopyContext.setWorkplaceSeq(dataMapper.getMaxWorkplaceInfoId());
-        CopyContext.setFinanceSeq(dataMapper.getMaxFinanceId());
-    }
-
 
     private HttpURLConnection openConnection() throws Exception {
         HttpURLConnection conn = (HttpURLConnection) new URI(URL).toURL().openConnection();
         conn.setRequestMethod("POST");
         conn.setDoOutput(true);
         conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-
         return conn;
     }
 

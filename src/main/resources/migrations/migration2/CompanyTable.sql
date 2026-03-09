@@ -24,5 +24,6 @@ CREATE TABLE company
     date_of_establishment DATE,
     qualification_grade   VARCHAR(255),
     update_date           TIMESTAMPTZ,
-    updated_at            TIMESTAMPTZ
+    updated_at            TIMESTAMPTZ,
+    inserted_at           TIMESTAMPTZ
 );

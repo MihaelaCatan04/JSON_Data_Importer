@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.java.gbizinfo.importer.context.CopyContext;
 import com.java.gbizinfo.importer.model.company.*;
 import com.java.gbizinfo.importer.model.cursor.IdCursor;
+import com.java.gbizinfo.importer.model.cursor.IdCursorSet;
 import com.java.gbizinfo.importer.model.stream.OutputStreamCollection;
 import com.java.gbizinfo.importer.model.writer.WriterCollection;
 import lombok.extern.log4j.Log4j2;
@@ -24,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.stream.Stream;
 import java.util.zip.ZipInputStream;
 
 @Log4j2
@@ -41,7 +43,7 @@ public class CopyInterceptor implements Interceptor {
                 representative_name, capital_stock, employee_number,
                 company_size_male, company_size_female, business_summary,
                 company_url, founding_year, date_of_establishment,
-                qualification_grade, update_date, updated_at
+                qualification_grade, update_date, updated_at, inserted_at
             ) FROM STDIN WITH (FORMAT csv, NULL '')
             """;
 
@@ -62,7 +64,9 @@ public class CopyInterceptor implements Interceptor {
     private static final String FINANCE_COPY = "COPY finance (finance_id, company_id, accounting_standards, fiscal_year_cover_page) FROM STDIN WITH (FORMAT csv, NULL '')";
     private static final String MAJOR_SHAREHOLDER_COPY = "COPY major_shareholder (finance_id, name_major_stakeholders, shareholding_ratio) FROM STDIN WITH (FORMAT csv, NULL '')";
     private static final String MANAGEMENT_INDEX_COPY = "COPY management_index (finance_id, period, net_sales_summary_of_business_results, net_sales_summary_of_business_results_unit_ref, operating_revenue1_summary_of_business_results, operating_revenue1_summary_of_business_results_unit_ref, operating_revenue2_summary_of_business_results, operating_revenue2_summary_of_business_results_unit_ref, gross_operating_revenue_summary_of_business_results, gross_operating_revenue_summary_of_business_results_unit_ref, ordinary_income_summary_of_business_results, ordinary_income_summary_of_business_results_unit_ref, net_premiums_written_summary_of_business_results_ins, net_premiums_written_summary_of_business_results_ins_unit_ref, ordinary_income_loss_summary_of_business_results, ordinary_income_loss_summary_of_business_results_unit_ref, net_income_loss_summary_of_business_results, net_income_loss_summary_of_business_results_unit_ref, capital_stock_summary_of_business_results, capital_stock_summary_of_business_results_unit_ref, net_assets_summary_of_business_results, net_assets_summary_of_business_results_unit_ref, total_assets_summary_of_business_results, total_assets_summary_of_business_results_unit_ref, number_of_employees, number_of_employees_unit_ref) FROM STDIN WITH (FORMAT csv, NULL '')";
-    private static final String SELECT_BY_CORPORATE_NUMBER = "SELECT company_id, corporate_number, updated_at FROM company WHERE corporate_number = ANY(?)";
+
+    private static final String SELECT_BY_CORPORATE_NUMBER = "SELECT company_id, corporate_number, update_date FROM company WHERE corporate_number = ANY(?)";
+
     private static final String UPDATE_COMPANY = """
             UPDATE company SET
                 name = ?, kana = ?, name_en = ?, postal_code = ?, location = ?,
@@ -88,11 +92,6 @@ public class CopyInterceptor implements Interceptor {
     private static final String FINANCE_ID_SEQ = "finance_id_seq";
     private static final String ITEM_INFO_ID_SEQ = "item_info_id_seq";
 
-    private static IdCursor companyIdCursor;
-    private static IdCursor patentIdCursor;
-    private static IdCursor workplaceIdCursor;
-    private static IdCursor financeIdCursor;
-
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         MappedStatement ms = (MappedStatement) invocation.getArgs()[0];
@@ -114,6 +113,8 @@ public class CopyInterceptor implements Interceptor {
     }
 
     private void executeCopy(PGConnection pgConn, Connection conn, ZipInputStream zip) throws Exception {
+        OffsetDateTime processedAt = OffsetDateTime.now();
+
         List<GbizCompany> companies = readCompanies(zip);
         Map<String, ExistingCompany> existing = findExistingCompanies(conn, companies);
 
@@ -124,12 +125,12 @@ public class CopyInterceptor implements Interceptor {
         Map<String, Long> infoCache = loadInfoCache(conn);
         registerNewInfoValues(conn, combinedData, infoCache);
 
-        initializeIdCursors(conn, result, combinedData);
+        IdCursorSet cursors = initializeIdCursors(conn, result, combinedData);
 
         OutputStreamCollection streams = new OutputStreamCollection();
         WriterCollection writers = new WriterCollection(streams);
 
-        processCompanies(pgConn, conn, result, writers, infoCache);
+        processCompanies(pgConn, conn, result, writers, infoCache, processedAt, cursors);
 
         finalizeCopy(pgConn, conn, result, writers, streams);
     }
@@ -151,9 +152,7 @@ public class CopyInterceptor implements Interceptor {
         return cache;
     }
 
-    private void registerNewInfoValues(Connection conn,
-                                       List<GbizCompany> companies,
-                                       Map<String, Long> infoCache) throws Exception {
+    private void registerNewInfoValues(Connection conn, List<GbizCompany> companies, Map<String, Long> infoCache) throws Exception {
         LinkedHashMap<String, Boolean> newEntries = collectNewEntries(companies, infoCache);
 
         if (newEntries.isEmpty()) {
@@ -165,8 +164,7 @@ public class CopyInterceptor implements Interceptor {
         writeEntries(conn, newEntries, infoIdCursor, infoCache);
     }
 
-    private LinkedHashMap<String, Boolean> collectNewEntries(List<GbizCompany> companies,
-                                                             Map<String, Long> infoCache) {
+    private LinkedHashMap<String, Boolean> collectNewEntries(List<GbizCompany> companies, Map<String, Long> infoCache) {
         LinkedHashMap<String, Boolean> newEntries = new LinkedHashMap<>();
         for (GbizCompany c : companies) {
             collectNewInfo(c.getIndustry(), true, infoCache, newEntries);
@@ -175,13 +173,9 @@ public class CopyInterceptor implements Interceptor {
         return newEntries;
     }
 
-    private void writeEntries(Connection conn,
-                              LinkedHashMap<String, Boolean> newEntries,
-                              IdCursor infoIdCursor,
-                              Map<String, Long> infoCache) throws Exception {
+    private void writeEntries(Connection conn, LinkedHashMap<String, Boolean> newEntries, IdCursor infoIdCursor, Map<String, Long> infoCache) throws Exception {
         PGConnection pgConn = conn.unwrap(PGConnection.class);
-        try (PGCopyOutputStream out = new PGCopyOutputStream(pgConn, ITEM_INFO_COPY);
-             BufferedWriter w = createWriter(out)) {
+        try (PGCopyOutputStream out = new PGCopyOutputStream(pgConn, ITEM_INFO_COPY); BufferedWriter w = createWriter(out)) {
 
             for (Map.Entry<String, Boolean> entry : newEntries.entrySet()) {
                 long infoId = infoIdCursor.moveNext();
@@ -200,13 +194,12 @@ public class CopyInterceptor implements Interceptor {
         return rawKey.substring(rawKey.indexOf(':') + 1);
     }
 
-
     private void collectNewInfo(List<String> values, boolean isIndustry, Map<String, Long> cache, LinkedHashMap<String, Boolean> newEntries) {
         if (values == null) return;
         for (String v : values) {
             if (v == null || v.isBlank()) continue;
             String key = infoKey(isIndustry, v);
-            if (cache.containsKey(key) && newEntries.containsKey(key)) continue;
+            if (cache.containsKey(key) || newEntries.containsKey(key)) continue;
             newEntries.put(key, isIndustry);
         }
     }
@@ -223,22 +216,24 @@ public class CopyInterceptor implements Interceptor {
         return combinedData;
     }
 
-    private void initializeIdCursors(Connection conn, CompanyProcessingResult result, List<GbizCompany> combinedData) throws SQLException {
-        companyIdCursor = fetchIds(conn, COMPANY_ID_SEQ, result.getNewCompanies().size());
-        patentIdCursor = fetchIds(conn, PATENT_ID_SEQ, countPatents(combinedData));
-        workplaceIdCursor = fetchIds(conn, WORKPLACE_INFO_ID_SEQ, countWorkplaces(combinedData));
-        financeIdCursor = fetchIds(conn, FINANCE_ID_SEQ, countFinances(combinedData));
+    private IdCursorSet initializeIdCursors(Connection conn, CompanyProcessingResult result, List<GbizCompany> combinedData) throws SQLException {
+        int expectedCombinedSize = result.getNewCompanies().size() + result.getChangedCompanies().size();
+        if (combinedData.size() != expectedCombinedSize) {
+            throw new IllegalStateException("combinedData size mismatch: expected %d (new=%d + changed=%d) but got %d".formatted(expectedCombinedSize, result.getNewCompanies().size(), result.getChangedCompanies().size(), combinedData.size()));
+        }
+
+        return new IdCursorSet(fetchIds(conn, COMPANY_ID_SEQ, result.getNewCompanies().size()), fetchIds(conn, PATENT_ID_SEQ, countPatents(combinedData)), fetchIds(conn, WORKPLACE_INFO_ID_SEQ, countWorkplaces(combinedData)), fetchIds(conn, FINANCE_ID_SEQ, countFinances(combinedData)));
     }
 
-    private void processCompanies(PGConnection pgConn, Connection conn, CompanyProcessingResult result, WriterCollection writers, Map<String, Long> infoCache) throws Exception {
-        processNewCompanies(pgConn, result.getNewCompanies(), writers, infoCache);
-        processChangedCompanies(conn, result.getChangedCompanies(), writers, infoCache);
+    private void processCompanies(PGConnection pgConn, Connection conn, CompanyProcessingResult result, WriterCollection writers, Map<String, Long> infoCache, OffsetDateTime processedAt, IdCursorSet cursors) throws Exception {
+        processNewCompanies(pgConn, result.getNewCompanies(), writers, infoCache, processedAt, cursors);
+        processChangedCompanies(conn, result.getChangedCompanies(), writers, infoCache, processedAt, cursors);
     }
 
     private void finalizeCopy(PGConnection pgConn, Connection conn, CompanyProcessingResult result, WriterCollection writers, OutputStreamCollection streams) throws Exception {
         writers.flushAll();
-        cleanupStaleChildren(conn, result.getChangedCompanies());
         copyBufferedStreams(pgConn, streams);
+        cleanupStaleChildren(conn, result.getChangedCompanies());
         log.info("All COPY operations complete.");
     }
 
@@ -252,6 +247,10 @@ public class CopyInterceptor implements Interceptor {
             ResultSet rs = ps.executeQuery();
             List<Long> ids = new ArrayList<>(count);
             while (rs.next()) ids.add(rs.getLong(1));
+            if (ids.size() != count) {
+                throw new IllegalStateException("Sequence '%s' returned %d IDs but %d were requested".formatted(sequenceName, ids.size(), count));
+            }
+
             return new IdCursor(ids);
         }
     }
@@ -286,13 +285,13 @@ public class CopyInterceptor implements Interceptor {
         int skipped = 0;
 
         for (GbizCompany company : companies) {
-            OffsetDateTime maxLastUpdate = resolveMaxLastUpdateDate(company);
+            OffsetDateTime fileUpdateDate = resolveMaxLastUpdateDate(company);
             ExistingCompany ex = existing.get(company.getCorporateNumber());
 
             if (ex == null) {
                 newCompanies.add(company);
-            } else if (isNewer(maxLastUpdate, ex.getUpdatedAt())) {
-                changedCompanies.add(new ChangedCompany(ex.getCompanyId(), company, maxLastUpdate));
+            } else if (isNewer(fileUpdateDate, ex.getUpdateDate())) {
+                changedCompanies.add(new ChangedCompany(ex.getCompanyId(), company, fileUpdateDate));
             } else {
                 skipped++;
             }
@@ -304,26 +303,28 @@ public class CopyInterceptor implements Interceptor {
         log.info("New: {}, changed: {}, unchanged (skipped): {}", result.getNewCompanies().size(), result.getChangedCompanies().size(), result.getSkipped());
     }
 
-    private void processNewCompanies(PGConnection pgConn, List<GbizCompany> newCompanies, WriterCollection writers, Map<String, Long> infoCache) throws Exception {
+    private void processNewCompanies(PGConnection pgConn, List<GbizCompany> newCompanies, WriterCollection writers, Map<String, Long> infoCache, OffsetDateTime processedAt, IdCursorSet cursors) throws Exception {
         if (newCompanies.isEmpty()) return;
 
         try (PGCopyOutputStream compStream = new PGCopyOutputStream(pgConn, COMPANY_COPY); BufferedWriter compWriter = createWriter(compStream)) {
 
             for (GbizCompany company : newCompanies) {
-                long companyId = companyIdCursor.moveNext();
-                OffsetDateTime updatedAt = resolveMaxLastUpdateDate(company);
-                writeCompanyRow(compWriter, company, companyId, updatedAt);
-                writeAllChildren(writers, company, companyId, infoCache);
+                long companyId = cursors.getCompany().moveNext();
+                OffsetDateTime fileUpdateDate = resolveMaxLastUpdateDate(company);
+                writeCompanyRow(compWriter, company, companyId, fileUpdateDate, processedAt);
+                writeAllChildren(writers, company, companyId, infoCache, cursors);
             }
         }
         log.info("Inserted {} new companies via COPY.", newCompanies.size());
     }
 
-    private void processChangedCompanies(Connection conn, List<ChangedCompany> changedCompanies, WriterCollection writers, Map<String, Long> infoCache) throws SQLException, IOException {
+    private void processChangedCompanies(Connection conn, List<ChangedCompany> changedCompanies, WriterCollection writers, Map<String, Long> infoCache, OffsetDateTime processedAt, IdCursorSet cursors) throws SQLException, IOException {
+        int updatedRows = 0;
         for (ChangedCompany cc : changedCompanies) {
-            updateCompanyRow(conn, cc);
-            writeAllChildren(writers, cc.getData(), cc.getCompanyId(), infoCache);
+            updatedRows += updateCompanyRow(conn, cc, processedAt);
+            writeAllChildren(writers, cc.getData(), cc.getCompanyId(), infoCache, cursors);
         }
+        log.error("Updated {} changed companies ({} DB rows affected).", changedCompanies.size(), updatedRows);
     }
 
     private void cleanupStaleChildren(Connection conn, List<ChangedCompany> changedCompanies) throws SQLException {
@@ -368,12 +369,12 @@ public class CopyInterceptor implements Interceptor {
     private Map<String, ExistingCompany> buildCompanyMap(ResultSet rs) throws SQLException {
         Map<String, ExistingCompany> map = new HashMap<>();
         while (rs.next()) {
-            map.put(rs.getString("corporate_number"), new ExistingCompany(rs.getLong("company_id"), rs.getObject("updated_at", OffsetDateTime.class)));
+            map.put(rs.getString("corporate_number"), new ExistingCompany(rs.getLong("company_id"), rs.getObject("update_date", OffsetDateTime.class)));
         }
         return map;
     }
 
-    private void updateCompanyRow(Connection conn, ChangedCompany cc) throws SQLException {
+    private int updateCompanyRow(Connection conn, ChangedCompany cc, OffsetDateTime processedAt) throws SQLException {
         GbizCompany c = cc.getData();
         try (PreparedStatement ps = conn.prepareStatement(UPDATE_COMPANY)) {
             ps.setString(1, c.getName());
@@ -397,11 +398,12 @@ public class CopyInterceptor implements Interceptor {
             ps.setObject(19, c.getFoundingYear());
             ps.setObject(20, parseLocalDate(c.getDateOfEstablishment()));
             ps.setString(21, c.getQualificationGrade());
-            ps.setObject(22, parseOffsetDateTime(c.getUpdateDate()));
-            ps.setObject(23, cc.getNewUpdatedAt());
+            ps.setObject(22, cc.getNewUpdatedAt());
+            ps.setObject(23, processedAt);
             ps.setLong(24, cc.getCompanyId());
             int rows = ps.executeUpdate();
             if (rows == 0) log.warn("UPDATE matched 0 rows for company_id={}", cc.getCompanyId());
+            return rows;
         }
     }
 
@@ -423,17 +425,16 @@ public class CopyInterceptor implements Interceptor {
         }
     }
 
-
-    private void writeAllChildren(WriterCollection writers, GbizCompany company, long companyId, Map<String, Long> infoCache) throws IOException {
+    private void writeAllChildren(WriterCollection writers, GbizCompany company, long companyId, Map<String, Long> infoCache, IdCursorSet cursors) throws IOException {
         writeCompanyItems(writers.getCompanyItemWriter(), companyId, company.getIndustry(), true, infoCache);
         writeCompanyItems(writers.getCompanyItemWriter(), companyId, company.getBusinessItems(), false, infoCache);
-        writePatents(writers, company, companyId);
+        writePatents(writers, company, companyId, cursors);
         writeCertifications(writers, company, companyId);
         writeSubsidies(writers, company, companyId);
         writeCommendations(writers, company, companyId);
         writeProcurements(writers, company, companyId);
-        writeWorkplaceInfos(writers, company, companyId);
-        writeFinances(writers, company, companyId);
+        writeWorkplaceInfos(writers, company, companyId, cursors);
+        writeFinances(writers, company, companyId, cursors);
     }
 
     private void writeCompanyItems(BufferedWriter out, long companyId, List<String> values, boolean isIndustry, Map<String, Long> infoCache) throws IOException {
@@ -478,15 +479,15 @@ public class CopyInterceptor implements Interceptor {
         }
     }
 
-    private void writeCompanyRow(BufferedWriter out, GbizCompany c, long companyId, OffsetDateTime updatedAt) throws IOException {
-        out.write(String.join(",", csv(companyId), csv(c.getCorporateNumber()), csv(c.getName()), csv(c.getKana()), csv(c.getNameEn()), csv(c.getPostalCode()), csv(c.getLocation()), csv(c.getProcess()), csv(c.getAggregatedYear()), csv(c.getStatus()), csv(c.getCloseDate()), csv(c.getCloseCause()), csv(c.getKind()), csv(c.getRepresentativeName()), csv(c.getCapitalStock()), csv(c.getEmployeeNumber()), csv(c.getCompanySizeMale()), csv(c.getCompanySizeFemale()), csv(c.getBusinessSummary()), csv(c.getCompanyUrl()), csv(c.getFoundingYear()), csv(c.getDateOfEstablishment()), csv(c.getQualificationGrade()), csv(c.getUpdateDate()), csv(updatedAt)));
+    private void writeCompanyRow(BufferedWriter out, GbizCompany c, long companyId, OffsetDateTime fileUpdateDate, OffsetDateTime processedAt) throws IOException {
+        out.write(String.join(",", csv(companyId), csv(c.getCorporateNumber()), csv(c.getName()), csv(c.getKana()), csv(c.getNameEn()), csv(c.getPostalCode()), csv(c.getLocation()), csv(c.getProcess()), csv(c.getAggregatedYear()), csv(c.getStatus()), csv(c.getCloseDate()), csv(c.getCloseCause()), csv(c.getKind()), csv(c.getRepresentativeName()), csv(c.getCapitalStock()), csv(c.getEmployeeNumber()), csv(c.getCompanySizeMale()), csv(c.getCompanySizeFemale()), csv(c.getBusinessSummary()), csv(c.getCompanyUrl()), csv(c.getFoundingYear()), csv(c.getDateOfEstablishment()), csv(c.getQualificationGrade()), csv(fileUpdateDate), csv(processedAt), csv(processedAt)));
         out.newLine();
     }
 
-    private void writePatents(WriterCollection w, GbizCompany company, long companyId) throws IOException {
+    private void writePatents(WriterCollection w, GbizCompany company, long companyId, IdCursorSet cursors) throws IOException {
         if (company.getPatent() == null) return;
         for (Patent patent : company.getPatent()) {
-            long patentId = patentIdCursor.moveNext();
+            long patentId = cursors.getPatent().moveNext();
             w.getPatentWriter().write(String.join(",", csv(patentId), csv(companyId), csv(patent.getPatentType()), csv(patent.getRegistrationNumber()), csv(patent.getApplicationDate()), csv(patent.getTitle()), csv(patent.getUrl())));
             w.getPatentWriter().newLine();
             writeClassifications(w, patentId, patent.getClassifications());
@@ -533,10 +534,10 @@ public class CopyInterceptor implements Interceptor {
         }
     }
 
-    private void writeWorkplaceInfos(WriterCollection w, GbizCompany company, long companyId) throws IOException {
+    private void writeWorkplaceInfos(WriterCollection w, GbizCompany company, long companyId, IdCursorSet cursors) throws IOException {
         if (company.getWorkplaceInfo() == null) return;
         for (WorkplaceInfo wi : company.getWorkplaceInfo()) {
-            long workplaceId = workplaceIdCursor.moveNext();
+            long workplaceId = cursors.getWorkplace().moveNext();
             w.getWorkplaceWriter().write(String.join(",", csv(workplaceId), csv(companyId)));
             w.getWorkplaceWriter().newLine();
             writeBaseInfo(w, wi, workplaceId);
@@ -566,10 +567,10 @@ public class CopyInterceptor implements Interceptor {
         w.getCompatChildWorkWriter().newLine();
     }
 
-    private void writeFinances(WriterCollection w, GbizCompany company, long companyId) throws IOException {
+    private void writeFinances(WriterCollection w, GbizCompany company, long companyId, IdCursorSet cursors) throws IOException {
         if (company.getFinance() == null) return;
         for (Finance finance : company.getFinance()) {
-            long financeId = financeIdCursor.moveNext();
+            long financeId = cursors.getFinance().moveNext();
             w.getFinanceWriter().write(String.join(",", csv(financeId), csv(companyId), csv(finance.getAccountingStandards()), csv(finance.getFiscalYearCoverPage())));
             w.getFinanceWriter().newLine();
             writeManagementIndex(finance, w, financeId);
@@ -596,17 +597,22 @@ public class CopyInterceptor implements Interceptor {
     private OffsetDateTime resolveMaxLastUpdateDate(GbizCompany company) {
         OffsetDateTime max = resolveFromMetaData(company.getMetaData());
         if (max == null) max = parseDate(company.getUpdateDate());
-        return max;
+        return maxDate(max, resolveMaxFromChildMetas(company));
     }
 
     private OffsetDateTime resolveFromMetaData(MetaData meta) {
         if (meta == null || meta.getLastUpdateDate() == null) return null;
-        OffsetDateTime max = null;
-        for (String raw : meta.getLastUpdateDate().values()) {
-            OffsetDateTime dt = parseDate(raw);
-            if (dt != null && (max == null || dt.isAfter(max))) max = dt;
-        }
-        return max;
+        return meta.getLastUpdateDate().values().stream().map(this::parseDate).filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(null);
+    }
+
+    private OffsetDateTime resolveMaxFromChildMetas(GbizCompany company) {
+        return Stream.of(company.getSubsidy(), company.getPatent(), company.getCertification(), company.getCommendation(), company.getProcurement(), company.getWorkplaceInfo(), company.getFinance()).filter(Objects::nonNull).flatMap(Collection::stream).map(HasChildMeta::getMetaData).filter(Objects::nonNull).map(m -> parseDate(m.getLastUpdateDate())).filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(null);
+    }
+
+    private OffsetDateTime maxDate(OffsetDateTime a, OffsetDateTime b) {
+        if (a == null) return b;
+        if (b == null) return a;
+        return a.isAfter(b) ? a : b;
     }
 
     private OffsetDateTime parseDate(String raw) {
@@ -632,15 +638,6 @@ public class CopyInterceptor implements Interceptor {
         if (raw == null || raw.isBlank()) return null;
         try {
             return java.sql.Date.valueOf(raw.substring(0, 10));
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private OffsetDateTime parseOffsetDateTime(String raw) {
-        if (raw == null || raw.isBlank()) return null;
-        try {
-            return OffsetDateTime.parse(raw);
         } catch (Exception e) {
             return null;
         }

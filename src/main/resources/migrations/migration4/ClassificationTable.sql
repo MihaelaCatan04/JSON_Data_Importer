@@ -5,5 +5,5 @@ CREATE TABLE classification
     code_value        VARCHAR(255),
     code_name         VARCHAR(255),
     japanese          VARCHAR(255),
-    FOREIGN KEY (patent_id) REFERENCES patent (patent_id)
+    FOREIGN KEY (patent_id) REFERENCES patent (patent_id) ON DELETE CASCADE
 );

@@ -6,5 +6,5 @@ CREATE TABLE compatibility_of_childcare_and_work
     number_of_maternity_leave              INTEGER,
     paternity_leave_acquisition_num        INTEGER,
     maternity_leave_acquisition_num        INTEGER,
-    FOREIGN KEY (workplace_info_id) REFERENCES workplace_info (workplace_info_id)
+    FOREIGN KEY (workplace_info_id) REFERENCES workplace_info (workplace_info_id) ON DELETE CASCADE
 );

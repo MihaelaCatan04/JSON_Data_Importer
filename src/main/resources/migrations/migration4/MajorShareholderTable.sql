@@ -4,5 +4,5 @@ CREATE TABLE major_shareholder
     finance_id              BIGINT,
     name_major_stakeholders VARCHAR(255),
     shareholding_ratio      DOUBLE PRECISION,
-    FOREIGN KEY (finance_id) REFERENCES finance (finance_id)
+    FOREIGN KEY (finance_id) REFERENCES finance (finance_id) ON DELETE CASCADE
 );

@@ -7,5 +7,5 @@ CREATE TABLE patent
     application_date    DATE,
     title               TEXT,
     url                 TEXT,
-    FOREIGN KEY (company_id) REFERENCES company (company_id)
+    FOREIGN KEY (company_id) REFERENCES company (company_id) ON DELETE CASCADE
 );

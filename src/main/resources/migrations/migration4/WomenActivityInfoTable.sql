@@ -8,5 +8,5 @@ CREATE TABLE women_activity_info
     gender_total_of_manager        DOUBLE PRECISION,
     female_share_of_officers       DOUBLE PRECISION,
     gender_total_of_officers       DOUBLE PRECISION,
-    FOREIGN KEY (workplace_info_id) REFERENCES workplace_info (workplace_info_id)
+    FOREIGN KEY (workplace_info_id) REFERENCES workplace_info (workplace_info_id) ON DELETE CASCADE
 );

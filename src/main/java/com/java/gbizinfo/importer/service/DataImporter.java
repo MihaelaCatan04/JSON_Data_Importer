@@ -158,9 +158,7 @@ public class DataImporter {
 
     private List<Path> listJsonFiles(Path folder) throws IOException {
         try (Stream<Path> stream = Files.list(folder)) {
-            return stream.filter(p -> p.getFileName().toString().endsWith(".json"))
-                    .sorted(Comparator.comparing(p -> p.getFileName().toString()))
-                    .toList();
+            return stream.filter(p -> p.getFileName().toString().endsWith(".json")).sorted(Comparator.comparing(p -> p.getFileName().toString())).toList();
         }
     }
 

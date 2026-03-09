@@ -105,4 +105,7 @@ public class GbizCompany {
 
     @JsonProperty("finance")
     private List<Finance> finance;
+
+    @JsonProperty("meta-data")
+    private MetaData metaData;
 }

@@ -5,21 +5,29 @@
         SELECT COUNT(*)
         FROM import_checkpoint
         WHERE zip_entry_name = #{entryName}
+          AND run_id = #{runId}
     </select>
     <update id="copy">
         SELECT 1
     </update>
     <insert id="insertCheckpoint">
-        INSERT INTO import_checkpoint (zip_entry_name)
-        VALUES (#{entryName}) ON CONFLICT DO NOTHING
+        INSERT INTO import_checkpoint (run_id, zip_entry_name)
+        VALUES (#{runId}, #{entryName})
     </insert>
     <select id="getMaxPatentId" resultType="long">
-        SELECT COALESCE(MAX(patent_id), 0) FROM patent
+        SELECT COALESCE(MAX(patent_id), 0)
+        FROM patent
     </select>
     <select id="getMaxWorkplaceInfoId" resultType="long">
-        SELECT COALESCE(MAX(workplace_info_id), 0) FROM workplace_info
+        SELECT COALESCE(MAX(workplace_info_id), 0)
+        FROM workplace_info
     </select>
     <select id="getMaxFinanceId" resultType="long">
-        SELECT COALESCE(MAX(finance_id), 0) FROM finance
+        SELECT COALESCE(MAX(finance_id), 0)
+        FROM finance
+    </select>
+    <select id="getMaxCompanyId" resultType="long">
+        SELECT COALESCE(MAX(company_id), 0)
+        FROM company
     </select>
 </mapper>

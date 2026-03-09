@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Setter
 @Getter
-public class Commendation {
+public class Commendation implements HasChildMeta {
     @JsonProperty("date_of_commendation")
     private String dateOfCommendation;
 
@@ -24,4 +24,7 @@ public class Commendation {
 
     @JsonProperty("note")
     private String note;
+
+    @JsonProperty("meta-data")
+    private ChildMetaData metaData;
 }

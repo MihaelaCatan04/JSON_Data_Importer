@@ -8,7 +8,7 @@ import java.util.List;
 
 @Setter
 @Getter
-public class Finance {
+public class Finance implements HasChildMeta {
     @JsonProperty("accounting_standards")
     private String accountingStandards;
 
@@ -20,4 +20,7 @@ public class Finance {
 
     @JsonProperty("major_shareholders")
     private List<MajorShareholders> majorShareholders;
+
+    @JsonProperty("meta-data")
+    private ChildMetaData metaData;
 }

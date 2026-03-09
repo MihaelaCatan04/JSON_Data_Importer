@@ -11,5 +11,5 @@ import java.time.OffsetDateTime;
 @AllArgsConstructor
 public class ExistingCompany {
     private long companyId;
-    private OffsetDateTime updatedAt;
+    private OffsetDateTime updateDate;
 }

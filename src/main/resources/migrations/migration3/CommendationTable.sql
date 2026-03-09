@@ -8,5 +8,8 @@ CREATE TABLE commendation
     category               VARCHAR(255),
     government_departments VARCHAR(255),
     note                   TEXT,
+    update_date            TIMESTAMPTZ,
+    updated_at             TIMESTAMPTZ,
+    inserted_at            TIMESTAMPTZ,
     FOREIGN KEY (company_id) REFERENCES company (company_id) ON DELETE CASCADE
 );

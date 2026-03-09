@@ -8,5 +8,7 @@ CREATE TABLE base_info
     average_continuous_service_years           DOUBLE PRECISION,
     average_age                                DOUBLE PRECISION,
     month_average_predetermined_overtime_hours DOUBLE PRECISION,
+    updated_at                                 TIMESTAMPTZ,
+    inserted_at                                TIMESTAMPTZ,
     FOREIGN KEY (workplace_info_id) REFERENCES workplace_info (workplace_info_id) ON DELETE CASCADE
 );

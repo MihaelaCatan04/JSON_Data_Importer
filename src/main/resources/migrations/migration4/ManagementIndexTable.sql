@@ -27,5 +27,7 @@ CREATE TABLE management_index
     total_assets_summary_of_business_results_unit_ref             VARCHAR(10),
     number_of_employees                                           BIGINT,
     number_of_employees_unit_ref                                  VARCHAR(10),
+    updated_at                                                    TIMESTAMPTZ,
+    inserted_at                                                   TIMESTAMPTZ,
     FOREIGN KEY (finance_id) REFERENCES finance (finance_id) ON DELETE CASCADE
 );

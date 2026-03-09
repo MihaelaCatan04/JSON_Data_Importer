@@ -7,5 +7,8 @@ CREATE TABLE subsidy
     amount                 BIGINT,
     target                 VARCHAR(255),
     government_departments VARCHAR(255),
+    update_date            TIMESTAMPTZ,
+    updated_at             TIMESTAMPTZ,
+    inserted_at            TIMESTAMPTZ,
     FOREIGN KEY (company_id) REFERENCES company (company_id) ON DELETE CASCADE
 );

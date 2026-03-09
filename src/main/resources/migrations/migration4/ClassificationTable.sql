@@ -5,5 +5,7 @@ CREATE TABLE classification
     code_value        VARCHAR(255),
     code_name         VARCHAR(255),
     japanese          VARCHAR(255),
+    updated_at        TIMESTAMPTZ,
+    inserted_at       TIMESTAMPTZ,
     FOREIGN KEY (patent_id) REFERENCES patent (patent_id) ON DELETE CASCADE
 );

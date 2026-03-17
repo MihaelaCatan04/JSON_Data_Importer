@@ -23,8 +23,10 @@ CREATE TABLE company
     founding_year         INTEGER,
     date_of_establishment DATE,
     qualification_grade   VARCHAR(255),
+    workplace_info        BIGINT,
     update_date           TIMESTAMPTZ,
     updated_at            TIMESTAMPTZ,
     inserted_at           TIMESTAMPTZ,
-    deleted               BOOLEAN
+    deleted               BOOLEAN,
+    FOREIGN KEY (workplace_info) REFERENCES workplace_info (workplace_info_id)
 );

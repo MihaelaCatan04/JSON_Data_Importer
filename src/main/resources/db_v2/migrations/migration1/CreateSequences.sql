@@ -10,3 +10,6 @@ CREATE SEQUENCE major_shareholder_id_seq;
 CREATE SEQUENCE management_index_id_seq;
 CREATE SEQUENCE procurement_id_seq;
 CREATE SEQUENCE subsidy_id_seq;
+CREATE SEQUENCE base_info_id_seq;
+CREATE SEQUENCE compatibility_id_seq;
+CREATE SEQUENCE women_activity_id_seq;

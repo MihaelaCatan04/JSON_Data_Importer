@@ -5,6 +5,7 @@ import com.java.gbizinfo.importer.mapper.DataMapper;
 import com.java.gbizinfo.importer.mapper.DeleteMapper;
 import com.java.gbizinfo.importer.mapper.MergeMapper;
 import com.java.gbizinfo.importer.mapper.StagingMapper;
+import jakarta.annotation.Nullable;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,11 +28,9 @@ import java.util.zip.ZipInputStream;
 @Service
 public class DataImporter {
 
-    private static final String URL =
-            "https://info.gbiz.go.jp/hojin/Download";
+    private static final String URL = "https://info.gbiz.go.jp/hojin/Download";
 
-    private static final String PARAMS_TEMPLATE =
-            "apiToken=%s&downfile=Hojinjoho&meta=META&downenc=UTF-8&isZip=on&downtype=zip";
+    private static final String PARAMS_TEMPLATE = "apiToken=%s&downfile=Hojinjoho&meta=META&downenc=UTF-8&isZip=on&downtype=zip";
 
     private final DataMapper dataMapper;
     private final StagingMapper stagingMapper;
@@ -45,11 +44,7 @@ public class DataImporter {
     @Value("${local-path}")
     private String localPath;
 
-    public DataImporter(DataMapper dataMapper,
-                        StagingMapper stagingMapper,
-                        MergeMapper mergeMapper,
-                        DeleteMapper deleteMapper,
-                        TransactionTemplate transactionTemplate) {
+    public DataImporter(DataMapper dataMapper, StagingMapper stagingMapper, MergeMapper mergeMapper, DeleteMapper deleteMapper, TransactionTemplate transactionTemplate) {
         this.dataMapper = dataMapper;
         this.stagingMapper = stagingMapper;
         this.mergeMapper = mergeMapper;
@@ -58,69 +53,96 @@ public class DataImporter {
     }
 
     public void importData() throws Exception {
-        String runId = UUID.randomUUID().toString();
-        log.info("Starting remote import run {}", runId);
+        String runId = startImportRun("remote", null);
 
         stagingMapper.clearRunStagingTables();
 
-        boolean success = true;
+        boolean success = executeRemoteImport(runId);
 
-        HttpURLConnection http = openConnection();
-        http.getOutputStream().write(buildParams().getBytes(StandardCharsets.UTF_8));
-
-        try (ZipInputStream zis = new ZipInputStream(http.getInputStream(), StandardCharsets.UTF_8)) {
-            success = processZipStream(zis, runId);
-        } finally {
-            http.disconnect();
-        }
-
-        if (success) {
-            transactionTemplate.executeWithoutResult(status -> runCleanup());
-            log.info("Remote import run {} complete", runId);
-        } else {
-            log.warn("Remote import run {} finished with failures; cleanup skipped", runId);
-        }
+        finalizeImportRun(runId, success, "remote");
     }
 
     public void importFromLocalFolder() throws Exception {
-        Path folder = Path.of(localPath);
-        if (!Files.isDirectory(folder)) {
-            throw new IllegalArgumentException("local-path is not a directory: " + folder);
-        }
+        Path folder = validateLocalFolder();
 
-        String runId = UUID.randomUUID().toString();
-        log.info("Starting local import run {} from {}", runId, folder);
+        String runId = startImportRun("local", folder.toString());
 
-        List<Path> files;
-        try (var stream = Files.list(folder)) {
-            files = stream
-                    .filter(path -> path.getFileName().toString().endsWith(".json"))
-                    .sorted(Comparator.comparing(path -> path.getFileName().toString()))
-                    .toList();
-        }
-
+        List<Path> files = listJsonFiles(folder);
         if (files.isEmpty()) {
             log.warn("No .json files found in {}", folder);
             return;
         }
 
         stagingMapper.clearRunStagingTables();
-
         log.info("Found {} .json files", files.size());
 
+        boolean success = processLocalFiles(files, runId);
+
+        finalizeImportRun(runId, success, "local");
+    }
+
+    private String startImportRun(String type, @Nullable String source) {
+        String runId = UUID.randomUUID().toString();
+        if (source == null || source.isBlank()) {
+            log.info("Starting {} import run {}", type, runId);
+        } else {
+            log.info("Starting {} import run {} from {}", type, runId, source);
+        }
+        return runId;
+    }
+
+    private boolean executeRemoteImport(String runId) throws Exception {
+        HttpURLConnection http = openConnection();
+        sendRequestParams(http);
+
+        boolean success;
+        try (ZipInputStream zis = new ZipInputStream(http.getInputStream(), StandardCharsets.UTF_8)) {
+            success = processZipStream(zis, runId);
+        } finally {
+            http.disconnect();
+        }
+        return success;
+    }
+
+    private void sendRequestParams(HttpURLConnection http) throws IOException {
+        http.getOutputStream().write(buildParams().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private Path validateLocalFolder() {
+        Path folder = Path.of(localPath);
+        if (!Files.isDirectory(folder)) {
+            throw new IllegalArgumentException("local-path is not a directory: " + folder);
+        }
+        return folder;
+    }
+
+    private List<Path> listJsonFiles(Path folder) throws IOException {
+        try (var stream = Files.list(folder)) {
+            return stream.filter(path -> path.getFileName().toString().endsWith(".json")).sorted(Comparator.comparing(path -> path.getFileName().toString())).toList();
+        }
+    }
+
+    private boolean processLocalFiles(List<Path> files, String runId) throws Exception {
         boolean success = true;
         for (Path file : files) {
             if (!processLocalJsonFile(file, runId)) {
                 success = false;
             }
         }
+        return success;
+    }
 
+    private void finalizeImportRun(String runId, boolean success, String type) {
         if (success) {
             transactionTemplate.executeWithoutResult(status -> runCleanup());
-            log.info("Local import run {} complete", runId);
+            log.info("{} import run {} complete", capitalize(type), runId);
         } else {
-            log.warn("Local import run {} finished with failures; cleanup skipped", runId);
+            log.warn("{} import run {} finished with failures; cleanup skipped", capitalize(type), runId);
         }
+    }
+
+    private String capitalize(String s) {
+        return s.substring(0, 1).toUpperCase() + s.substring(1);
     }
 
     private boolean processZipStream(ZipInputStream zis, String runId) throws IOException {
@@ -129,13 +151,17 @@ public class DataImporter {
         ZipEntry entry;
         while ((entry = zis.getNextEntry()) != null) {
             String name = entry.getName();
-            if (name.endsWith(".json")) {
-                if (!processEntry(zis, name, runId)) {
-                    success = false;
-                }
-            } else {
+
+            if (!name.endsWith(".json")) {
                 log.debug("Skipping non-json zip entry: {}", name);
+                zis.closeEntry();
+                continue;
             }
+
+            if (!processEntry(zis, name, runId)) {
+                success = false;
+            }
+
             zis.closeEntry();
         }
 
@@ -144,9 +170,7 @@ public class DataImporter {
 
     private boolean processLocalJsonFile(Path file, String runId) throws Exception {
         String entryName = file.getFileName().toString();
-
-        try (InputStream is = Files.newInputStream(file);
-             ZipInputStream zis = new SingleEntryZipInputStream(is, entryName)) {
+        try (InputStream is = Files.newInputStream(file); ZipInputStream zis = new SingleEntryZipInputStream(is, entryName)) {
 
             zis.getNextEntry();
             boolean success = processEntry(zis, entryName, runId);
@@ -154,6 +178,7 @@ public class DataImporter {
             return success;
         }
     }
+
 
     private boolean processEntry(ZipInputStream zis, String entryName, String runId) {
         try {
@@ -187,8 +212,7 @@ public class DataImporter {
     }
 
     private HttpURLConnection openConnection() throws Exception {
-        HttpURLConnection connection =
-                (HttpURLConnection) new URI(URL).toURL().openConnection();
+        HttpURLConnection connection = (HttpURLConnection) new URI(URL).toURL().openConnection();
         connection.setRequestMethod("POST");
         connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");

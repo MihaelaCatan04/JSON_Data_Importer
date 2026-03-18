@@ -2,19 +2,22 @@ package com.java.gbizinfo.importer.context;
 
 import java.util.zip.ZipInputStream;
 
-public class CopyContext {
+public final class CopyContext {
 
-    private static final ThreadLocal<ZipInputStream> ZIS = new ThreadLocal<>();
+    private static final ThreadLocal<ZipInputStream> ZIP_HOLDER = new ThreadLocal<>();
 
-    public static void set(ZipInputStream zip) {
-        ZIS.set(zip);
+    private CopyContext() {
+    }
+
+    public static void set(ZipInputStream zipInputStream) {
+        ZIP_HOLDER.set(zipInputStream);
     }
 
     public static ZipInputStream getZip() {
-        return ZIS.get();
+        return ZIP_HOLDER.get();
     }
 
     public static void clear() {
-        ZIS.remove();
+        ZIP_HOLDER.remove();
     }
 }

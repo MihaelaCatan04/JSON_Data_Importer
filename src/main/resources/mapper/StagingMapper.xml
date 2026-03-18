@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.java.gbizinfo.importer.mapper.StagingMapper">
+
+    <update id="clearStagingTables">
+        TRUNCATE TABLE
+            stg_company,
+            stg_company_item,
+            stg_patent,
+            stg_classification,
+            stg_certification,
+            stg_subsidy,
+            stg_commendation,
+            stg_procurement,
+            stg_base_info,
+            stg_women_activity,
+            stg_compat_childcare,
+            stg_finance,
+            stg_major_shareholder,
+            stg_management_index
+    </update>
+
+    <update id="clearRunStagingTables">
+        TRUNCATE TABLE
+            run_company,
+            run_company_item,
+            run_patent,
+            run_classification,
+            run_certification,
+            run_subsidy,
+            run_commendation,
+            run_procurement,
+            run_finance,
+            run_major_shareholder,
+            run_management_index
+    </update>
+
+    <update id="appendRunCompany">
+        INSERT INTO run_company (corporate_number)
+        SELECT DISTINCT corporate_number
+        FROM stg_company
+        WHERE corporate_number IS NOT NULL
+        ON CONFLICT DO NOTHING
+    </update>
+
+    <update id="appendRunCompanyItem">
+        INSERT INTO run_company_item (corporate_number, value, is_industry)
+        SELECT DISTINCT corporate_number, value, is_industry
+        FROM stg_company_item
+        WHERE corporate_number IS NOT NULL
+          AND value IS NOT NULL
+        ON CONFLICT DO NOTHING
+    </update>
+
+    <update id="appendRunPatent">
+        INSERT INTO run_patent (corporate_number, merge_key)
+        SELECT DISTINCT corporate_number, merge_key
+        FROM stg_patent
+        WHERE corporate_number IS NOT NULL
+          AND merge_key IS NOT NULL
+        ON CONFLICT DO NOTHING
+    </update>
+
+    <update id="appendRunClassification">
+        INSERT INTO run_classification (patent_merge_key, merge_key)
+        SELECT DISTINCT patent_merge_key, merge_key
+        FROM stg_classification
+        WHERE patent_merge_key IS NOT NULL
+          AND merge_key IS NOT NULL
+        ON CONFLICT DO NOTHING
+    </update>
+
+    <update id="appendRunCertification">
+        INSERT INTO run_certification (corporate_number, merge_key)
+        SELECT DISTINCT corporate_number, merge_key
+        FROM stg_certification
+        WHERE corporate_number IS NOT NULL
+          AND merge_key IS NOT NULL
+        ON CONFLICT DO NOTHING
+    </update>
+
+    <update id="appendRunSubsidy">
+        INSERT INTO run_subsidy (corporate_number, merge_key)
+        SELECT DISTINCT corporate_number, merge_key
+        FROM stg_subsidy
+        WHERE corporate_number IS NOT NULL
+          AND merge_key IS NOT NULL
+        ON CONFLICT DO NOTHING
+    </update>
+
+    <update id="appendRunCommendation">
+        INSERT INTO run_commendation (corporate_number, merge_key)
+        SELECT DISTINCT corporate_number, merge_key
+        FROM stg_commendation
+        WHERE corporate_number IS NOT NULL
+          AND merge_key IS NOT NULL
+        ON CONFLICT DO NOTHING
+    </update>
+
+    <update id="appendRunProcurement">
+        INSERT INTO run_procurement (corporate_number, merge_key)
+        SELECT DISTINCT corporate_number, merge_key
+        FROM stg_procurement
+        WHERE corporate_number IS NOT NULL
+          AND merge_key IS NOT NULL
+        ON CONFLICT DO NOTHING
+    </update>
+
+    <update id="appendRunFinance">
+        INSERT INTO run_finance (corporate_number, merge_key)
+        SELECT DISTINCT corporate_number, merge_key
+        FROM stg_finance
+        WHERE corporate_number IS NOT NULL
+          AND merge_key IS NOT NULL
+        ON CONFLICT DO NOTHING
+    </update>
+
+    <update id="appendRunMajorShareholder">
+        INSERT INTO run_major_shareholder (finance_merge_key, merge_key)
+        SELECT DISTINCT finance_merge_key, merge_key
+        FROM stg_major_shareholder
+        WHERE finance_merge_key IS NOT NULL
+          AND merge_key IS NOT NULL
+        ON CONFLICT DO NOTHING
+    </update>
+
+    <update id="appendRunManagementIndex">
+        INSERT INTO run_management_index (finance_merge_key, merge_key)
+        SELECT DISTINCT finance_merge_key, merge_key
+        FROM stg_management_index
+        WHERE finance_merge_key IS NOT NULL
+          AND merge_key IS NOT NULL
+        ON CONFLICT DO NOTHING
+    </update>
+
+</mapper>

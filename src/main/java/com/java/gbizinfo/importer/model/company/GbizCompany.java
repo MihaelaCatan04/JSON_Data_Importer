@@ -1,7 +1,9 @@
 package com.java.gbizinfo.importer.model.company;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.List;
 
@@ -95,7 +97,7 @@ public class GbizCompany {
     private List<Subsidy> subsidy;
 
     @JsonProperty("workplace_info")
-    private List<WorkplaceInfo> workplaceInfo;
+    private WorkplaceInfo workplaceInfo;
 
     @JsonProperty("commendation")
     private List<Commendation> commendation;

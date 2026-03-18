@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.java.gbizinfo.importer.mapper.DeleteMapper">
+
+    <update id="deleteStaleCompanyItems">
+        UPDATE company_item ci
+        SET deleted = true
+        WHERE ci.deleted = false
+          AND ci.company_id IN (SELECT c.company_id
+                                FROM company c
+                                         JOIN run_company rc ON rc.corporate_number = c.corporate_number)
+          AND NOT EXISTS (SELECT 1
+                          FROM run_company_item s
+                                   JOIN company c ON c.corporate_number = s.corporate_number
+                                   JOIN item_info i
+                                        ON i.merge_key = md5(norm_text(s.value) || '|' || norm_bool(s.is_industry))
+                          WHERE c.company_id = ci.company_id
+                            AND i.info_id = ci.info_id)
+    </update>
+
+    <update id="deleteStaleCompanyPatents">
+        UPDATE company_patent cp
+        SET deleted = true
+        WHERE cp.deleted = false
+          AND cp.company_id IN (
+            SELECT c.company_id
+            FROM company c
+                     JOIN run_company rc ON rc.corporate_number = c.corporate_number
+        )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM run_patent s
+                     JOIN company c ON c.corporate_number = s.corporate_number
+                     JOIN patent p ON p.merge_key = s.merge_key
+            WHERE c.company_id = cp.company_id
+              AND p.patent_id = cp.patent_id
+        )
+    </update>
+
+    <update id="deleteStalePatentClassifications">
+        UPDATE patent_classification pc
+        SET deleted = true
+        WHERE pc.deleted = false
+          AND pc.patent_id IN (
+            SELECT DISTINCT p.patent_id
+            FROM run_patent s
+                     JOIN patent p ON p.merge_key = s.merge_key
+        )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM run_classification s
+                     JOIN patent p ON p.merge_key = s.patent_merge_key
+                     JOIN classification c ON c.merge_key = s.merge_key
+            WHERE p.patent_id = pc.patent_id
+              AND c.classification_id = pc.classification_id
+        )
+    </update>
+
+    <update id="deleteStaleCertifications">
+        UPDATE company_certification cc
+        SET deleted = true
+        WHERE cc.deleted = false
+          AND cc.company_id IN (
+            SELECT c.company_id
+            FROM company c
+                     JOIN run_company rc ON rc.corporate_number = c.corporate_number
+        )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM run_certification s
+                     JOIN company c ON c.corporate_number = s.corporate_number
+                     JOIN certification e ON e.merge_key = s.merge_key
+            WHERE c.company_id = cc.company_id
+              AND e.certification_id = cc.certification_id
+        )
+    </update>
+
+    <update id="deleteStaleSubsidies">
+        UPDATE company_subsidy cs
+        SET deleted = true
+        WHERE cs.deleted = false
+          AND cs.company_id IN (
+            SELECT c.company_id
+            FROM company c
+                     JOIN run_company rc ON rc.corporate_number = c.corporate_number
+        )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM run_subsidy s
+                     JOIN company c ON c.corporate_number = s.corporate_number
+                     JOIN subsidy e ON e.merge_key = s.merge_key
+            WHERE c.company_id = cs.company_id
+              AND e.subsidy_id = cs.subsidy_id
+        )
+    </update>
+
+    <update id="deleteStaleCommendations">
+        UPDATE company_commendation cc
+        SET deleted = true
+        WHERE cc.deleted = false
+          AND cc.company_id IN (
+            SELECT c.company_id
+            FROM company c
+                     JOIN run_company rc ON rc.corporate_number = c.corporate_number
+        )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM run_commendation s
+                     JOIN company c ON c.corporate_number = s.corporate_number
+                     JOIN commendation e ON e.merge_key = s.merge_key
+            WHERE c.company_id = cc.company_id
+              AND e.commendation_id = cc.commendation_id
+        )
+    </update>
+
+    <update id="deleteStaleProcurements">
+        UPDATE company_procurement cp
+        SET deleted = true
+        WHERE cp.deleted = false
+          AND cp.company_id IN (
+            SELECT c.company_id
+            FROM company c
+                     JOIN run_company rc ON rc.corporate_number = c.corporate_number
+        )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM run_procurement s
+                     JOIN company c ON c.corporate_number = s.corporate_number
+                     JOIN procurement e ON e.merge_key = s.merge_key
+            WHERE c.company_id = cp.company_id
+              AND e.procurement_id = cp.procurement_id
+        )
+    </update>
+
+    <update id="deleteStaleFinances">
+        UPDATE company_finance cf
+        SET deleted = true
+        WHERE cf.deleted = false
+          AND cf.company_id IN (
+            SELECT c.company_id
+            FROM company c
+                     JOIN run_company rc ON rc.corporate_number = c.corporate_number
+        )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM run_finance s
+                     JOIN company c ON c.corporate_number = s.corporate_number
+                     JOIN finance f ON f.merge_key = s.merge_key
+            WHERE c.company_id = cf.company_id
+              AND f.finance_id = cf.finance_id
+        )
+    </update>
+
+    <update id="deleteStaleFinanceShareholders">
+        UPDATE finance_shareholder fs
+        SET deleted = true
+        WHERE fs.deleted = false
+          AND fs.finance_id IN (
+            SELECT DISTINCT f.finance_id
+            FROM run_finance s
+                     JOIN finance f ON f.merge_key = s.merge_key
+        )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM run_major_shareholder s
+                     JOIN finance f ON f.merge_key = s.finance_merge_key
+                     JOIN major_shareholder ms ON ms.merge_key = s.merge_key
+            WHERE f.finance_id = fs.finance_id
+              AND ms.major_shareholder_id = fs.major_shareholder_id
+        )
+    </update>
+
+    <update id="deleteStaleFinanceManagement">
+        UPDATE finance_management fm
+        SET deleted = true
+        WHERE fm.deleted = false
+          AND fm.finance_id IN (
+            SELECT DISTINCT f.finance_id
+            FROM run_finance s
+                     JOIN finance f ON f.merge_key = s.merge_key
+        )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM run_management_index s
+                     JOIN finance f ON f.merge_key = s.finance_merge_key
+                     JOIN management_index m ON m.merge_key = s.merge_key
+            WHERE f.finance_id = fm.finance_id
+              AND m.management_index_id = fm.management_index_id
+        )
+    </update>
+
+</mapper>

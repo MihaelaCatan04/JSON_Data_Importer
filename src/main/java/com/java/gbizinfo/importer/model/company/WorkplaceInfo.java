@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Setter
 @Getter
-public class WorkplaceInfo implements HasChildMeta {
+public class WorkplaceInfo {
     @JsonProperty("base_infos")
     private BaseInfos baseInfos;
 
@@ -15,7 +15,4 @@ public class WorkplaceInfo implements HasChildMeta {
 
     @JsonProperty("compatibility_of_childcare_and_work")
     private CompatibilityOfChildcareAndWork compatibilityOfChildcareAndWork;
-
-    @JsonProperty("meta-data")
-    private ChildMetaData metaData;
 }

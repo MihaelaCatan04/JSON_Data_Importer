@@ -8,7 +8,7 @@ import java.util.List;
 
 @Setter
 @Getter
-public class Patent implements HasChildMeta {
+public class Patent {
     @JsonProperty("patent_type")
     private String patentType;
 
@@ -26,7 +26,4 @@ public class Patent implements HasChildMeta {
 
     @JsonProperty("url")
     private String url;
-
-    @JsonProperty("meta-data")
-    private ChildMetaData metaData;
 }

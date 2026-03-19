@@ -9,7 +9,6 @@ import java.util.List;
 @Setter
 @Getter
 public class Patent {
-
     @JsonProperty("patent_type")
     private String patentType;
 

@@ -1,25 +1,22 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.java.gbizinfo.importer.mapper.DataMapper">
+
     <select id="getTimesCheckpointed" resultType="int">
         SELECT COUNT(*)
         FROM import_checkpoint
-        WHERE zip_entry_name = #{entryName}
+        WHERE run_id = #{runId}
+          AND zip_entry_name = #{entryName}
     </select>
+
+    <insert id="insertCheckpoint">
+        INSERT INTO import_checkpoint(run_id, zip_entry_name)
+        VALUES (#{runId}, #{entryName})
+    </insert>
+
     <update id="copy">
         SELECT 1
     </update>
-    <insert id="insertCheckpoint">
-        INSERT INTO import_checkpoint (zip_entry_name)
-        VALUES (#{entryName}) ON CONFLICT DO NOTHING
-    </insert>
-    <select id="getMaxPatentId" resultType="long">
-        SELECT COALESCE(MAX(patent_id), 0) FROM patent
-    </select>
-    <select id="getMaxWorkplaceInfoId" resultType="long">
-        SELECT COALESCE(MAX(workplace_info_id), 0) FROM workplace_info
-    </select>
-    <select id="getMaxFinanceId" resultType="long">
-        SELECT COALESCE(MAX(finance_id), 0) FROM finance
-    </select>
+
 </mapper>

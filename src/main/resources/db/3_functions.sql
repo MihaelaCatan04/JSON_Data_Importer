@@ -1,0 +1,66 @@
+CREATE OR REPLACE FUNCTION norm_text(p_text TEXT)
+    RETURNS TEXT
+    LANGUAGE sql
+    IMMUTABLE
+AS
+$$
+SELECT COALESCE(NULLIF(regexp_replace(trim(p_text), '\s+', ' ', 'g'), ''), '<NULL>')
+$$;
+
+CREATE OR REPLACE FUNCTION norm_date(p_date DATE)
+    RETURNS TEXT
+    LANGUAGE sql
+    IMMUTABLE
+AS
+$$
+SELECT COALESCE(to_char(p_date, 'YYYY-MM-DD'), '<NULL>')
+$$;
+
+CREATE OR REPLACE FUNCTION norm_timestamptz(p_ts TIMESTAMPTZ)
+    RETURNS TEXT
+    LANGUAGE sql
+    IMMUTABLE
+AS
+$$
+SELECT COALESCE(to_char(p_ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS'), '<NULL>')
+$$;
+
+CREATE OR REPLACE FUNCTION norm_bigint(p_num BIGINT)
+    RETURNS TEXT
+    LANGUAGE sql
+    IMMUTABLE
+AS
+$$
+SELECT COALESCE(p_num::TEXT, '<NULL>')
+$$;
+
+CREATE OR REPLACE FUNCTION norm_int(p_num INTEGER)
+    RETURNS TEXT
+    LANGUAGE sql
+    IMMUTABLE
+AS
+$$
+SELECT COALESCE(p_num::TEXT, '<NULL>')
+$$;
+
+CREATE OR REPLACE FUNCTION norm_bool(p_bool BOOLEAN)
+    RETURNS TEXT
+    LANGUAGE sql
+    IMMUTABLE
+AS
+$$
+SELECT CASE
+           WHEN p_bool IS TRUE THEN 'true'
+           WHEN p_bool IS FALSE THEN 'false'
+           ELSE '<NULL>'
+           END
+$$;
+
+CREATE OR REPLACE FUNCTION norm_double(p_num DOUBLE PRECISION)
+    RETURNS TEXT
+    LANGUAGE sql
+    IMMUTABLE
+AS
+$$
+SELECT COALESCE(trim(to_char(p_num, 'FM999999999999999990D999999999999999')), '<NULL>')
+$$;

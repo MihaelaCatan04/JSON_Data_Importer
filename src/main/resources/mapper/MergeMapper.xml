@@ -1,0 +1,580 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.java.gbizinfo.importer.mapper.MergeMapper">
+
+    <update id="mergeCompany">
+        INSERT INTO company (corporate_number, name, kana, name_en, postal_code, location,
+                             process, aggregated_year, status, close_date, close_cause, kind,
+                             representative_name, capital_stock, employee_number,
+                             company_size_male, company_size_female, business_summary, company_url,
+                             founding_year, date_of_establishment, qualification_grade,
+                             update_date, updated_at, inserted_at, deleted)
+        SELECT DISTINCT ON (s.corporate_number) s.corporate_number,
+                                                s.name,
+                                                s.kana,
+                                                s.name_en,
+                                                s.postal_code,
+                                                s.location,
+                                                s.process,
+                                                s.aggregated_year,
+                                                s.status,
+                                                s.close_date,
+                                                s.close_cause,
+                                                s.kind,
+                                                s.representative_name,
+                                                s.capital_stock,
+                                                s.employee_number,
+                                                s.company_size_male,
+                                                s.company_size_female,
+                                                s.business_summary,
+                                                s.company_url,
+                                                s.founding_year,
+                                                s.date_of_establishment,
+                                                s.qualification_grade,
+                                                s.update_date,
+                                                NULL,
+                                                now(),
+                                                false
+        FROM stg_company s
+        WHERE s.corporate_number IS NOT NULL
+        ORDER BY s.corporate_number, s.update_date DESC NULLS LAST
+        ON CONFLICT (corporate_number)
+            DO UPDATE SET name                  = EXCLUDED.name,
+                          kana                  = EXCLUDED.kana,
+                          name_en               = EXCLUDED.name_en,
+                          postal_code           = EXCLUDED.postal_code,
+                          location              = EXCLUDED.location,
+                          process               = EXCLUDED.process,
+                          aggregated_year       = EXCLUDED.aggregated_year,
+                          status                = EXCLUDED.status,
+                          close_date            = EXCLUDED.close_date,
+                          close_cause           = EXCLUDED.close_cause,
+                          kind                  = EXCLUDED.kind,
+                          representative_name   = EXCLUDED.representative_name,
+                          capital_stock         = EXCLUDED.capital_stock,
+                          employee_number       = EXCLUDED.employee_number,
+                          company_size_male     = EXCLUDED.company_size_male,
+                          company_size_female   = EXCLUDED.company_size_female,
+                          business_summary      = EXCLUDED.business_summary,
+                          company_url           = EXCLUDED.company_url,
+                          founding_year         = EXCLUDED.founding_year,
+                          date_of_establishment = EXCLUDED.date_of_establishment,
+                          qualification_grade   = EXCLUDED.qualification_grade,
+                          update_date           = EXCLUDED.update_date,
+                          updated_at            = now(),
+                          deleted               = false
+        WHERE company.name IS DISTINCT FROM EXCLUDED.name
+           OR company.kana IS DISTINCT FROM EXCLUDED.kana
+           OR company.name_en IS DISTINCT FROM EXCLUDED.name_en
+           OR company.postal_code IS DISTINCT FROM EXCLUDED.postal_code
+           OR company.location IS DISTINCT FROM EXCLUDED.location
+           OR company.process IS DISTINCT FROM EXCLUDED.process
+           OR company.aggregated_year IS DISTINCT FROM EXCLUDED.aggregated_year
+           OR company.status IS DISTINCT FROM EXCLUDED.status
+           OR company.close_date IS DISTINCT FROM EXCLUDED.close_date
+           OR company.close_cause IS DISTINCT FROM EXCLUDED.close_cause
+           OR company.kind IS DISTINCT FROM EXCLUDED.kind
+           OR company.representative_name IS DISTINCT FROM EXCLUDED.representative_name
+           OR company.capital_stock IS DISTINCT FROM EXCLUDED.capital_stock
+           OR company.employee_number IS DISTINCT FROM EXCLUDED.employee_number
+           OR company.company_size_male IS DISTINCT FROM EXCLUDED.company_size_male
+           OR company.company_size_female IS DISTINCT FROM EXCLUDED.company_size_female
+           OR company.business_summary IS DISTINCT FROM EXCLUDED.business_summary
+           OR company.company_url IS DISTINCT FROM EXCLUDED.company_url
+           OR company.founding_year IS DISTINCT FROM EXCLUDED.founding_year
+           OR company.date_of_establishment IS DISTINCT FROM EXCLUDED.date_of_establishment
+           OR company.qualification_grade IS DISTINCT FROM EXCLUDED.qualification_grade
+           OR company.update_date IS DISTINCT FROM EXCLUDED.update_date
+           OR company.deleted IS DISTINCT FROM false
+    </update>
+
+    <update id="mergeItemInfo">
+        INSERT INTO item_info (merge_key, value, is_industry, deleted, inserted_at)
+        SELECT DISTINCT ON (md5(norm_text(value) || '|' || norm_bool(is_industry))) md5(norm_text(value) || '|' || norm_bool(is_industry)),
+                                                                                    value,
+                                                                                    is_industry,
+                                                                                    false,
+                                                                                    now()
+        FROM stg_company_item
+        WHERE value IS NOT NULL
+        ON CONFLICT (merge_key)
+            DO UPDATE SET deleted = false
+        WHERE item_info.deleted = true
+    </update>
+
+    <update id="mergeBaseInfo">
+        INSERT INTO base_info (merge_key,
+                               average_continuous_service_years_type,
+                               average_continuous_service_years_male,
+                               average_continuous_service_years_female,
+                               average_continuous_service_years,
+                               average_age,
+                               month_average_predetermined_overtime_hours,
+                               deleted)
+        SELECT DISTINCT ON (merge_key) merge_key,
+                                       average_continuous_service_years_type,
+                                       average_continuous_service_years_male,
+                                       average_continuous_service_years_female,
+                                       average_continuous_service_years,
+                                       average_age,
+                                       month_average_predetermined_overtime_hours,
+                                       false
+        FROM stg_base_info
+        WHERE merge_key IS NOT NULL
+        ON CONFLICT (merge_key)
+            DO UPDATE SET deleted = false
+        WHERE base_info.deleted = true
+    </update>
+
+    <update id="mergeWomenActivity">
+        INSERT INTO women_activity_info (merge_key,
+                                         female_workers_proportion_type,
+                                         female_workers_proportion,
+                                         female_share_of_manager,
+                                         gender_total_of_manager,
+                                         female_share_of_officers,
+                                         gender_total_of_officers,
+                                         deleted)
+        SELECT DISTINCT ON (merge_key) merge_key,
+                                       female_workers_proportion_type,
+                                       female_workers_proportion,
+                                       female_share_of_manager,
+                                       gender_total_of_manager,
+                                       female_share_of_officers,
+                                       gender_total_of_officers,
+                                       false
+        FROM stg_women_activity
+        WHERE merge_key IS NOT NULL
+        ORDER BY merge_key
+        ON CONFLICT (merge_key)
+            DO UPDATE SET deleted = false
+        WHERE women_activity_info.deleted = true
+    </update>
+
+    <update id="mergeCompatChildcare">
+        INSERT INTO compatibility_of_childcare_and_work (merge_key,
+                                                         number_of_paternity_leave,
+                                                         number_of_maternity_leave,
+                                                         paternity_leave_acquisition_num,
+                                                         maternity_leave_acquisition_num,
+                                                         deleted)
+        SELECT DISTINCT ON (merge_key) merge_key,
+                                       number_of_paternity_leave,
+                                       number_of_maternity_leave,
+                                       paternity_leave_acquisition_num,
+                                       maternity_leave_acquisition_num,
+                                       false
+        FROM stg_compat_childcare
+        WHERE merge_key IS NOT NULL
+        ORDER BY merge_key
+        ON CONFLICT (merge_key)
+            DO UPDATE SET deleted = false
+        WHERE compatibility_of_childcare_and_work.deleted = true
+    </update>
+
+    <update id="truncateCompanyWorkplaceParts">
+        TRUNCATE TABLE stg_company_workplace_parts
+    </update>
+
+    <update id="seedCompanyWorkplaceParts">
+        INSERT INTO stg_company_workplace_parts (corporate_number)
+        SELECT DISTINCT corporate_number
+        FROM stg_company
+        WHERE corporate_number IS NOT NULL
+    </update>
+
+    <update id="resolveBaseInfoToCompanyParts">
+        UPDATE stg_company_workplace_parts p
+        SET base_info_id = x.base_info_id
+        FROM (SELECT DISTINCT ON (sbi.corporate_number) sbi.corporate_number,
+                                                        bi.base_info_id
+              FROM stg_base_info sbi
+                       JOIN base_info bi ON bi.merge_key = sbi.merge_key
+              WHERE sbi.corporate_number IS NOT NULL
+              ORDER BY sbi.corporate_number) x
+        WHERE p.corporate_number = x.corporate_number
+    </update>
+
+    <update id="resolveWomenActivityToCompanyParts">
+        UPDATE stg_company_workplace_parts p
+        SET women_activity_info_id = x.women_activity_info_id
+        FROM (SELECT DISTINCT ON (swa.corporate_number) swa.corporate_number,
+                                                        wi.women_activity_info_id
+              FROM stg_women_activity swa
+                       JOIN women_activity_info wi ON wi.merge_key = swa.merge_key
+              WHERE swa.corporate_number IS NOT NULL
+              ORDER BY swa.corporate_number) x
+        WHERE p.corporate_number = x.corporate_number
+    </update>
+
+    <update id="resolveChildcareToCompanyParts">
+        UPDATE stg_company_workplace_parts p
+        SET compatibility_of_childcare_and_work_id = x.compatibility_of_childcare_and_work_id
+        FROM (SELECT DISTINCT ON (scc.corporate_number) scc.corporate_number,
+                                                        cc.compatibility_of_childcare_and_work_id
+              FROM stg_compat_childcare scc
+                       JOIN compatibility_of_childcare_and_work cc
+                            ON cc.merge_key = scc.merge_key
+              WHERE scc.corporate_number IS NOT NULL
+              ORDER BY scc.corporate_number) x
+        WHERE p.corporate_number = x.corporate_number
+    </update>
+
+    <update id="computeWorkplacePartsMergeKey">
+        UPDATE stg_company_workplace_parts
+        SET merge_key = md5(
+                COALESCE(base_info_id::text, '∅') || '|' ||
+                COALESCE(women_activity_info_id::text, '∅') || '|' ||
+                COALESCE(compatibility_of_childcare_and_work_id::text, '∅')
+                        )
+        WHERE base_info_id IS NOT NULL
+           OR women_activity_info_id IS NOT NULL
+           OR compatibility_of_childcare_and_work_id IS NOT NULL
+    </update>
+
+    <update id="mergeWorkplaceInfo">
+        INSERT INTO workplace_info (merge_key,
+                                    base_info,
+                                    women_activity_info,
+                                    compatibility_of_childcare_and_work,
+                                    inserted_at,
+                                    deleted)
+        SELECT DISTINCT ON (merge_key) merge_key,
+                                       base_info_id,
+                                       women_activity_info_id,
+                                       compatibility_of_childcare_and_work_id,
+                                       now(),
+                                       false
+        FROM stg_company_workplace_parts
+        WHERE merge_key IS NOT NULL
+        ORDER BY merge_key
+        ON CONFLICT (merge_key)
+            DO UPDATE SET deleted = false
+        WHERE workplace_info.deleted = true
+    </update>
+
+    <update id="attachWorkplaceToCompany">
+        UPDATE company c
+        SET workplace_info = w.workplace_info_id,
+            updated_at     = now(),
+            deleted        = false
+        FROM stg_company_workplace_parts p
+                 JOIN workplace_info w ON w.merge_key = p.merge_key
+        WHERE c.corporate_number = p.corporate_number
+          AND p.merge_key IS NOT NULL
+          AND (
+            c.workplace_info IS DISTINCT FROM w.workplace_info_id
+                OR c.deleted IS DISTINCT FROM false
+            )
+    </update>
+
+    <update id="mergePatent">
+        INSERT INTO patent (merge_key, patent_type, registration_number, application_date, title, url, deleted)
+        SELECT DISTINCT ON (merge_key) merge_key,
+                                       patent_type,
+                                       registration_number,
+                                       application_date,
+                                       title,
+                                       url,
+                                       false
+        FROM stg_patent
+        WHERE merge_key IS NOT NULL
+        ORDER BY merge_key
+        ON CONFLICT (merge_key)
+            DO UPDATE SET deleted = false
+        WHERE patent.deleted = true
+    </update>
+
+    <update id="mergeClassification">
+        INSERT INTO classification (merge_key, code_value, code_name, japanese, deleted)
+        SELECT DISTINCT ON (merge_key) merge_key,
+                                       code_value,
+                                       code_name,
+                                       japanese,
+                                       false
+        FROM stg_classification
+        WHERE merge_key IS NOT NULL
+        ORDER BY merge_key
+        ON CONFLICT (merge_key)
+            DO UPDATE SET deleted = false
+        WHERE classification.deleted = true
+    </update>
+
+    <update id="mergeCertification">
+        INSERT INTO certification (merge_key, date_of_approval, title, target, government_departments, category,
+                                   deleted)
+        SELECT DISTINCT ON (merge_key) merge_key,
+                                       date_of_approval,
+                                       title,
+                                       target,
+                                       government_departments,
+                                       category,
+                                       false
+        FROM stg_certification
+        WHERE merge_key IS NOT NULL
+        ORDER BY merge_key
+        ON CONFLICT (merge_key)
+            DO UPDATE SET deleted = false
+        WHERE certification.deleted = true
+    </update>
+
+    <update id="mergeSubsidy">
+        INSERT INTO subsidy (merge_key, date_of_approval, title, amount, target, government_departments, deleted)
+        SELECT DISTINCT ON (merge_key) merge_key,
+                                       date_of_approval,
+                                       title,
+                                       amount,
+                                       target,
+                                       government_departments,
+                                       false
+        FROM stg_subsidy
+        WHERE merge_key IS NOT NULL
+        ORDER BY merge_key
+        ON CONFLICT (merge_key)
+            DO UPDATE SET deleted = false
+        WHERE subsidy.deleted = true
+    </update>
+
+    <update id="mergeCommendation">
+        INSERT INTO commendation (merge_key, date_of_commendation, title, target, category, government_departments,
+                                  note, deleted)
+        SELECT DISTINCT ON (merge_key) merge_key,
+                                       date_of_commendation,
+                                       title,
+                                       target,
+                                       category,
+                                       government_departments,
+                                       note,
+                                       false
+        FROM stg_commendation
+        WHERE merge_key IS NOT NULL
+        ORDER BY merge_key
+        ON CONFLICT (merge_key)
+            DO UPDATE SET deleted = false
+        WHERE commendation.deleted = true
+    </update>
+
+    <update id="mergeProcurement">
+        INSERT INTO procurement (merge_key, date_of_order, title, amount, government_departments, note, deleted)
+        SELECT DISTINCT ON (merge_key) merge_key,
+                                       date_of_order,
+                                       title,
+                                       amount,
+                                       government_departments,
+                                       note,
+                                       false
+        FROM stg_procurement
+        WHERE merge_key IS NOT NULL
+        ORDER BY merge_key
+        ON CONFLICT (merge_key)
+            DO UPDATE SET deleted = false
+        WHERE procurement.deleted = true
+    </update>
+
+    <update id="mergeFinance">
+        INSERT INTO finance (merge_key, accounting_standards, fiscal_year_cover_page, deleted)
+        SELECT DISTINCT ON (merge_key) merge_key,
+                                       accounting_standards,
+                                       fiscal_year_cover_page,
+                                       false
+        FROM stg_finance
+        WHERE merge_key IS NOT NULL
+        ORDER BY merge_key
+        ON CONFLICT (merge_key)
+            DO UPDATE SET deleted = false
+        WHERE finance.deleted = true
+    </update>
+
+    <update id="mergeMajorShareholder">
+        INSERT INTO major_shareholder (merge_key, name_major_stakeholders, shareholding_ratio, deleted)
+        SELECT DISTINCT ON (merge_key) merge_key,
+                                       name_major_stakeholders,
+                                       shareholding_ratio,
+                                       false
+        FROM stg_major_shareholder
+        WHERE merge_key IS NOT NULL
+        ORDER BY merge_key
+        ON CONFLICT (merge_key)
+            DO UPDATE SET deleted = false
+        WHERE major_shareholder.deleted = true
+    </update>
+
+    <update id="mergeManagementIndex">
+        INSERT INTO management_index (merge_key, period,
+                                      net_sales_summary_of_business_results,
+                                      net_sales_summary_of_business_results_unit_ref,
+                                      operating_revenue1_summary_of_business_results,
+                                      operating_revenue1_summary_of_business_results_unit_ref,
+                                      operating_revenue2_summary_of_business_results,
+                                      operating_revenue2_summary_of_business_results_unit_ref,
+                                      gross_operating_revenue_summary_of_business_results,
+                                      gross_operating_revenue_summary_of_business_results_unit_ref,
+                                      ordinary_income_summary_of_business_results,
+                                      ordinary_income_summary_of_business_results_unit_ref,
+                                      net_premiums_written_summary_of_business_results_ins,
+                                      net_premiums_written_summary_of_business_results_ins_unit_ref,
+                                      ordinary_income_loss_summary_of_business_results,
+                                      ordinary_income_loss_summary_of_business_results_unit_ref,
+                                      net_income_loss_summary_of_business_results,
+                                      net_income_loss_summary_of_business_results_unit_ref,
+                                      capital_stock_summary_of_business_results,
+                                      capital_stock_summary_of_business_results_unit_ref,
+                                      net_assets_summary_of_business_results,
+                                      net_assets_summary_of_business_results_unit_ref,
+                                      total_assets_summary_of_business_results,
+                                      total_assets_summary_of_business_results_unit_ref,
+                                      number_of_employees, number_of_employees_unit_ref,
+                                      deleted)
+        SELECT DISTINCT ON (merge_key) merge_key,
+                                       period,
+                                       net_sales_summary_of_business_results,
+                                       net_sales_summary_of_business_results_unit_ref,
+                                       operating_revenue1_summary_of_business_results,
+                                       operating_revenue1_summary_of_business_results_unit_ref,
+                                       operating_revenue2_summary_of_business_results,
+                                       operating_revenue2_summary_of_business_results_unit_ref,
+                                       gross_operating_revenue_summary_of_business_results,
+                                       gross_operating_revenue_summary_of_business_results_unit_ref,
+                                       ordinary_income_summary_of_business_results,
+                                       ordinary_income_summary_of_business_results_unit_ref,
+                                       net_premiums_written_summary_of_business_results_ins,
+                                       net_premiums_written_summary_of_business_results_ins_unit_ref,
+                                       ordinary_income_loss_summary_of_business_results,
+                                       ordinary_income_loss_summary_of_business_results_unit_ref,
+                                       net_income_loss_summary_of_business_results,
+                                       net_income_loss_summary_of_business_results_unit_ref,
+                                       capital_stock_summary_of_business_results,
+                                       capital_stock_summary_of_business_results_unit_ref,
+                                       net_assets_summary_of_business_results,
+                                       net_assets_summary_of_business_results_unit_ref,
+                                       total_assets_summary_of_business_results,
+                                       total_assets_summary_of_business_results_unit_ref,
+                                       number_of_employees,
+                                       number_of_employees_unit_ref,
+                                       false
+        FROM stg_management_index
+        WHERE merge_key IS NOT NULL
+        ORDER BY merge_key
+        ON CONFLICT (merge_key)
+            DO UPDATE SET deleted = false
+        WHERE management_index.deleted = true
+    </update>
+
+    <update id="mergeCompanyItem">
+        INSERT INTO company_item (company_id, info_id, deleted)
+        SELECT DISTINCT c.company_id,
+                        i.info_id,
+                        false
+        FROM stg_company_item s
+                 JOIN company c ON c.corporate_number = s.corporate_number
+                 JOIN item_info i
+                      ON i.merge_key = md5(norm_text(s.value) || '|' || norm_bool(s.is_industry))
+        WHERE s.value IS NOT NULL
+        ON CONFLICT (company_id, info_id)
+            DO UPDATE SET deleted = false
+        WHERE company_item.deleted = true
+    </update>
+
+    <update id="mergeCompanyPatent">
+        INSERT INTO company_patent (company_id, patent_id, inserted_at, deleted)
+        SELECT DISTINCT c.company_id, p.patent_id, now(), false
+        FROM stg_patent s
+                 JOIN company c ON c.corporate_number = s.corporate_number
+                 JOIN patent p ON p.merge_key = s.merge_key
+        ON CONFLICT (company_id, patent_id)
+            DO UPDATE SET deleted = false
+        WHERE company_patent.deleted = true
+    </update>
+
+    <update id="mergePatentClassification">
+        INSERT INTO patent_classification (patent_id, classification_id, inserted_at, deleted)
+        SELECT DISTINCT p.patent_id, c.classification_id, now(), false
+        FROM stg_classification s
+                 JOIN patent p ON p.merge_key = s.patent_merge_key
+                 JOIN classification c ON c.merge_key = s.merge_key
+        ON CONFLICT (patent_id, classification_id)
+            DO UPDATE SET deleted = false
+        WHERE patent_classification.deleted = true
+    </update>
+
+    <update id="mergeCompanyCertification">
+        INSERT INTO company_certification (company_id, certification_id, inserted_at, deleted)
+        SELECT DISTINCT c.company_id, e.certification_id, now(), false
+        FROM stg_certification s
+                 JOIN company c ON c.corporate_number = s.corporate_number
+                 JOIN certification e ON e.merge_key = s.merge_key
+        ON CONFLICT (company_id, certification_id)
+            DO UPDATE SET deleted = false
+        WHERE company_certification.deleted = true
+    </update>
+
+    <update id="mergeCompanySubsidy">
+        INSERT INTO company_subsidy (company_id, subsidy_id, inserted_at, deleted)
+        SELECT DISTINCT c.company_id, s2.subsidy_id, now(), false
+        FROM stg_subsidy s
+                 JOIN company c ON c.corporate_number = s.corporate_number
+                 JOIN subsidy s2 ON s2.merge_key = s.merge_key
+        ON CONFLICT (company_id, subsidy_id)
+            DO UPDATE SET deleted = false
+        WHERE company_subsidy.deleted = true
+    </update>
+
+    <update id="mergeCompanyCommendation">
+        INSERT INTO company_commendation (company_id, commendation_id, inserted_at, deleted)
+        SELECT DISTINCT c.company_id, e.commendation_id, now(), false
+        FROM stg_commendation s
+                 JOIN company c ON c.corporate_number = s.corporate_number
+                 JOIN commendation e ON e.merge_key = s.merge_key
+        ON CONFLICT (company_id, commendation_id)
+            DO UPDATE SET deleted = false
+        WHERE company_commendation.deleted = true
+    </update>
+
+    <update id="mergeCompanyProcurement">
+        INSERT INTO company_procurement (company_id, procurement_id, inserted_at, deleted)
+        SELECT DISTINCT c.company_id, e.procurement_id, now(), false
+        FROM stg_procurement s
+                 JOIN company c ON c.corporate_number = s.corporate_number
+                 JOIN procurement e ON e.merge_key = s.merge_key
+        ON CONFLICT (company_id, procurement_id)
+            DO UPDATE SET deleted = false
+        WHERE company_procurement.deleted = true
+    </update>
+
+    <update id="mergeCompanyFinance">
+        INSERT INTO company_finance (company_id, finance_id, inserted_at, deleted)
+        SELECT DISTINCT c.company_id, f.finance_id, now(), false
+        FROM stg_finance s
+                 JOIN company c ON c.corporate_number = s.corporate_number
+                 JOIN finance f ON f.merge_key = s.merge_key
+        ON CONFLICT (company_id, finance_id)
+            DO UPDATE SET deleted = false
+        WHERE company_finance.deleted = true
+    </update>
+
+    <update id="mergeFinanceShareholder">
+        INSERT INTO finance_shareholder (finance_id, major_shareholder_id, inserted_at, deleted)
+        SELECT DISTINCT f.finance_id, ms.major_shareholder_id, now(), false
+        FROM stg_major_shareholder s
+                 JOIN finance f ON f.merge_key = s.finance_merge_key
+                 JOIN major_shareholder ms ON ms.merge_key = s.merge_key
+        ON CONFLICT (finance_id, major_shareholder_id)
+            DO UPDATE SET deleted = false
+        WHERE finance_shareholder.deleted = true
+    </update>
+
+    <update id="mergeFinanceManagement">
+        INSERT INTO finance_management (finance_id, management_index_id, inserted_at, deleted)
+        SELECT DISTINCT f.finance_id, m.management_index_id, now(), false
+        FROM stg_management_index s
+                 JOIN finance f ON f.merge_key = s.finance_merge_key
+                 JOIN management_index m ON m.merge_key = s.merge_key
+        ON CONFLICT (finance_id, management_index_id)
+            DO UPDATE SET deleted = false
+        WHERE finance_management.deleted = true
+    </update>
+
+</mapper>

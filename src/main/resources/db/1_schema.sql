@@ -207,7 +207,7 @@ CREATE TABLE workplace_info
 CREATE TABLE company
 (
     company_id            BIGINT PRIMARY KEY DEFAULT nextval('company_id_seq'),
-    corporate_number      VARCHAR(13) UNIQUE,
+    corporate_number      VARCHAR(13) UNIQUE NOT NULL,
     name                  VARCHAR(255),
     kana                  VARCHAR(255),
     name_en               VARCHAR(255),
@@ -243,6 +243,7 @@ CREATE TABLE company_certification
     certification_id BIGINT  NOT NULL,
     inserted_at      TIMESTAMPTZ      DEFAULT now(),
     deleted          BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at       TIMESTAMPTZ,
     FOREIGN KEY (company_id) REFERENCES company (company_id),
     FOREIGN KEY (certification_id) REFERENCES certification (certification_id),
     UNIQUE (company_id, certification_id)
@@ -254,6 +255,7 @@ CREATE TABLE company_commendation
     commendation_id BIGINT  NOT NULL,
     inserted_at     TIMESTAMPTZ      DEFAULT now(),
     deleted         BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at      TIMESTAMPTZ,
     FOREIGN KEY (company_id) REFERENCES company (company_id),
     FOREIGN KEY (commendation_id) REFERENCES commendation (commendation_id),
     UNIQUE (company_id, commendation_id)
@@ -265,6 +267,7 @@ CREATE TABLE company_finance
     finance_id  BIGINT  NOT NULL,
     inserted_at TIMESTAMPTZ      DEFAULT now(),
     deleted     BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at  TIMESTAMPTZ,
     FOREIGN KEY (company_id) REFERENCES company (company_id),
     FOREIGN KEY (finance_id) REFERENCES finance (finance_id),
     UNIQUE (company_id, finance_id)
@@ -275,6 +278,7 @@ CREATE TABLE company_item
     company_id BIGINT  NOT NULL REFERENCES company (company_id),
     info_id    BIGINT  NOT NULL REFERENCES item_info (info_id),
     deleted    BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at TIMESTAMPTZ,
     UNIQUE (company_id, info_id)
 );
 
@@ -284,6 +288,7 @@ CREATE TABLE company_patent
     patent_id   BIGINT  NOT NULL,
     inserted_at TIMESTAMPTZ      DEFAULT now(),
     deleted     BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at  TIMESTAMPTZ,
     FOREIGN KEY (company_id) REFERENCES company (company_id),
     FOREIGN KEY (patent_id) REFERENCES patent (patent_id),
     UNIQUE (company_id, patent_id)
@@ -295,6 +300,7 @@ CREATE TABLE company_procurement
     procurement_id BIGINT  NOT NULL,
     inserted_at    TIMESTAMPTZ      DEFAULT now(),
     deleted        BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at     TIMESTAMPTZ,
     FOREIGN KEY (company_id) REFERENCES company (company_id),
     FOREIGN KEY (procurement_id) REFERENCES procurement (procurement_id),
     UNIQUE (company_id, procurement_id)
@@ -306,6 +312,7 @@ CREATE TABLE company_subsidy
     subsidy_id  BIGINT  NOT NULL,
     inserted_at TIMESTAMPTZ      DEFAULT now(),
     deleted     BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at  TIMESTAMPTZ,
     FOREIGN KEY (company_id) REFERENCES company (company_id),
     FOREIGN KEY (subsidy_id) REFERENCES subsidy (subsidy_id),
     UNIQUE (company_id, subsidy_id)
@@ -317,6 +324,7 @@ CREATE TABLE finance_management
     management_index_id BIGINT  NOT NULL,
     inserted_at         TIMESTAMPTZ      DEFAULT now(),
     deleted             BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at          TIMESTAMPTZ,
     FOREIGN KEY (finance_id) REFERENCES finance (finance_id),
     FOREIGN KEY (management_index_id) REFERENCES management_index (management_index_id),
     UNIQUE (finance_id, management_index_id)
@@ -328,6 +336,7 @@ CREATE TABLE finance_shareholder
     major_shareholder_id BIGINT  NOT NULL,
     inserted_at          TIMESTAMPTZ      DEFAULT now(),
     deleted              BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at           TIMESTAMPTZ,
     FOREIGN KEY (finance_id) REFERENCES finance (finance_id),
     FOREIGN KEY (major_shareholder_id) REFERENCES major_shareholder (major_shareholder_id),
     UNIQUE (finance_id, major_shareholder_id)
@@ -339,6 +348,7 @@ CREATE TABLE patent_classification
     classification_id BIGINT  NOT NULL,
     inserted_at       TIMESTAMPTZ      DEFAULT now(),
     deleted           BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at        TIMESTAMPTZ,
     FOREIGN KEY (patent_id) REFERENCES patent (patent_id),
     FOREIGN KEY (classification_id) REFERENCES classification (classification_id),
     UNIQUE (patent_id, classification_id)

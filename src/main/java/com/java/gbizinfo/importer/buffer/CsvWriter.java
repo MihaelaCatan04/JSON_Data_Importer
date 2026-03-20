@@ -32,8 +32,7 @@ public class CsvWriter {
         }
 
         String s = value.toString();
-        boolean mustQuote =
-                s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains("\r");
+        boolean mustQuote = s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains("\r");
 
         if (!mustQuote) {
             out.write(s.getBytes(StandardCharsets.UTF_8));

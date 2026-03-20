@@ -2,20 +2,20 @@ package com.java.gbizinfo.importer.buffer;
 
 public class StagingBuffer {
 
-    public final CsvWriter company = new CsvWriter();
-    public final CsvWriter companyItem = new CsvWriter();
-    public final CsvWriter patent = new CsvWriter();
-    public final CsvWriter classification = new CsvWriter();
-    public final CsvWriter certification = new CsvWriter();
-    public final CsvWriter subsidy = new CsvWriter();
-    public final CsvWriter commendation = new CsvWriter();
-    public final CsvWriter procurement = new CsvWriter();
-    public final CsvWriter baseInfo = new CsvWriter();
-    public final CsvWriter womenActivity = new CsvWriter();
-    public final CsvWriter compatChildcare = new CsvWriter();
-    public final CsvWriter finance = new CsvWriter();
-    public final CsvWriter majorShareholder = new CsvWriter();
-    public final CsvWriter managementIndex = new CsvWriter();
+    public static final CsvWriter company = new CsvWriter();
+    public static final CsvWriter companyItem = new CsvWriter();
+    public static final CsvWriter patent = new CsvWriter();
+    public static final CsvWriter classification = new CsvWriter();
+    public static final CsvWriter certification = new CsvWriter();
+    public static final CsvWriter subsidy = new CsvWriter();
+    public static final CsvWriter commendation = new CsvWriter();
+    public static final CsvWriter procurement = new CsvWriter();
+    public static final CsvWriter baseInfo = new CsvWriter();
+    public static final CsvWriter womenActivity = new CsvWriter();
+    public static final CsvWriter compatChildcare = new CsvWriter();
+    public static final CsvWriter finance = new CsvWriter();
+    public static final CsvWriter majorShareholder = new CsvWriter();
+    public static final CsvWriter managementIndex = new CsvWriter();
 
     public byte[] companyBytes() {
         return company.toByteArray();

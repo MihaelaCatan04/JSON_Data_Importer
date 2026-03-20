@@ -1,8 +1,11 @@
 package com.java.gbizinfo.importer.model.company;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.java.gbizinfo.importer.buffer.StagingBuffer;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.io.IOException;
 
 import static com.java.gbizinfo.importer.util.HashUtil.*;
 
@@ -29,5 +32,10 @@ public class WomenActivityInfos {
 
     public String womenActivityMergeKey() {
         return mergeKey(normText(this.femaleWorkersProportionType), normNumber(this.femaleWorkersProportion), normNumber(this.femaleShareOfManager), normNumber(this.genderTotalOfManager), normNumber(this.femaleShareOfOfficers), normNumber(this.genderTotalOfOfficers));
+    }
+
+    public void writeWomenActivityInfo(String corporateNumber) throws IOException {
+        String mergeKey = womenActivityMergeKey();
+        StagingBuffer.womenActivity.writeRow(corporateNumber, mergeKey, this.femaleWorkersProportionType, this.femaleWorkersProportion, this.femaleShareOfManager, this.genderTotalOfManager, this.femaleShareOfOfficers, this.genderTotalOfOfficers);
     }
 }

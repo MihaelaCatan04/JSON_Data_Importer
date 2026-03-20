@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+import static com.java.gbizinfo.importer.util.HashUtil.*;
+
 @Setter
 @Getter
 public class Subsidy {
@@ -21,4 +23,8 @@ public class Subsidy {
 
     @JsonProperty("government_departments")
     private String governmentDepartments;
+
+    public String subsidyMergeKey() {
+        return mergeKey(normDate(this.dateOfApproval), normText(this.title), normText(this.amount), normText(this.target), normText(this.governmentDepartments));
+    }
 }

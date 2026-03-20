@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+import static com.java.gbizinfo.importer.util.HashUtil.*;
+
 @Setter
 @Getter
 public class Commendation {
@@ -24,4 +26,8 @@ public class Commendation {
 
     @JsonProperty("note")
     private String note;
+
+    public String commendationMergeKey() {
+        return mergeKey(normDate(this.dateOfCommendation), normText(this.title), normText(this.target), normText(this.category), normText(this.governmentDepartments), normText(this.note));
+    }
 }

@@ -7,7 +7,6 @@ import com.java.gbizinfo.importer.buffer.StagingBuffer;
 import com.java.gbizinfo.importer.context.CopyContext;
 import com.java.gbizinfo.importer.model.company.*;
 import com.java.gbizinfo.importer.util.CopyUtil;
-import com.java.gbizinfo.importer.util.HashUtil;
 import lombok.extern.log4j.Log4j2;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.MappedStatement;
@@ -138,7 +137,7 @@ public class CopyInterceptor implements Interceptor {
         }
 
         for (Patent patent : company.getPatent()) {
-            String patentMergeKey = HashUtil.patentMergeKey(patent.getPatentType(), patent.getRegistrationNumber(), patent.getApplicationDate(), patent.getTitle(), patent.getUrl());
+            String patentMergeKey = patent.patentMergeKey();
 
             buffer.patent.writeRow(company.getCorporateNumber(), patentMergeKey, patent.getPatentType(), patent.getRegistrationNumber(), patent.getApplicationDate(), patent.getTitle(), patent.getUrl());
 
@@ -149,7 +148,7 @@ public class CopyInterceptor implements Interceptor {
     private void writeClassification(StagingBuffer buffer, Patent patent, String patentMergeKey) throws IOException {
         if (patent.getClassifications() != null) {
             for (Classifications cl : patent.getClassifications()) {
-                String classificationMergeKey = HashUtil.classificationMergeKey(cl.getCodeValue(), cl.getCodeName(), cl.getJapanese());
+                String classificationMergeKey = cl.classificationMergeKey();
 
                 buffer.classification.writeRow(patentMergeKey, classificationMergeKey, cl.getCodeValue(), cl.getCodeName(), cl.getJapanese());
             }
@@ -162,7 +161,7 @@ public class CopyInterceptor implements Interceptor {
         }
 
         for (Certification certification : company.getCertification()) {
-            String mergeKey = HashUtil.certificationMergeKey(certification.getDateOfApproval(), certification.getTitle(), certification.getTarget(), certification.getGovernmentDepartments(), certification.getCategory());
+            String mergeKey = certification.certificationMergeKey();
 
             buffer.certification.writeRow(company.getCorporateNumber(), mergeKey, certification.getDateOfApproval(), certification.getTitle(), certification.getTarget(), certification.getGovernmentDepartments(), certification.getCategory());
         }
@@ -174,7 +173,7 @@ public class CopyInterceptor implements Interceptor {
         }
 
         for (Subsidy subsidy : company.getSubsidy()) {
-            String mergeKey = HashUtil.subsidyMergeKey(subsidy.getDateOfApproval(), subsidy.getTitle(), subsidy.getAmount(), subsidy.getTarget(), subsidy.getGovernmentDepartments());
+            String mergeKey = subsidy.subsidyMergeKey();
 
             buffer.subsidy.writeRow(company.getCorporateNumber(), mergeKey, subsidy.getDateOfApproval(), subsidy.getTitle(), subsidy.getAmount(), subsidy.getTarget(), subsidy.getGovernmentDepartments());
         }
@@ -186,7 +185,7 @@ public class CopyInterceptor implements Interceptor {
         }
 
         for (Commendation commendation : company.getCommendation()) {
-            String mergeKey = HashUtil.commendationMergeKey(commendation.getDateOfCommendation(), commendation.getTitle(), commendation.getTarget(), commendation.getCategory(), commendation.getGovernmentDepartments(), commendation.getNote());
+            String mergeKey = commendation.commendationMergeKey();
 
             buffer.commendation.writeRow(company.getCorporateNumber(), mergeKey, commendation.getDateOfCommendation(), commendation.getTitle(), commendation.getTarget(), commendation.getCategory(), commendation.getGovernmentDepartments(), commendation.getNote());
         }
@@ -198,7 +197,7 @@ public class CopyInterceptor implements Interceptor {
         }
 
         for (Procurement procurement : company.getProcurement()) {
-            String mergeKey = HashUtil.procurementMergeKey(procurement.getDateOfOrder(), procurement.getTitle(), procurement.getAmount(), procurement.getGovernmentDepartments(), procurement.getNote());
+            String mergeKey = procurement.procurementMergeKey();
 
             buffer.procurement.writeRow(company.getCorporateNumber(), mergeKey, procurement.getDateOfOrder(), procurement.getTitle(), procurement.getAmount(), procurement.getGovernmentDepartments(), procurement.getNote());
         }
@@ -220,7 +219,7 @@ public class CopyInterceptor implements Interceptor {
     private void writeBaseInfo(StagingBuffer buffer, WorkplaceInfo workplaceInfo, GbizCompany company) throws IOException {
         BaseInfos base = workplaceInfo.getBaseInfos();
         if (base != null) {
-            String mergeKey = HashUtil.baseInfoMergeKey(base.getAverageContinuousServiceYearsType(), base.getAverageContinuousServiceYearsMale(), base.getAverageContinuousServiceYearsFemale(), base.getAverageContinuousServiceYears(), base.getAverageAge(), base.getMonthAveragePredeterminedOvertimeHours());
+            String mergeKey = base.baseInfoMergeKey();
 
             buffer.baseInfo.writeRow(company.getCorporateNumber(), mergeKey, base.getAverageContinuousServiceYearsType(), base.getAverageContinuousServiceYearsMale(), base.getAverageContinuousServiceYearsFemale(), base.getAverageContinuousServiceYears(), base.getAverageAge(), base.getMonthAveragePredeterminedOvertimeHours());
         }
@@ -229,7 +228,7 @@ public class CopyInterceptor implements Interceptor {
     private void writeWomenActivityInfo(StagingBuffer buffer, WorkplaceInfo workplaceInfo, GbizCompany company) throws IOException {
         WomenActivityInfos women = workplaceInfo.getWomenActivityInfos();
         if (women != null) {
-            String mergeKey = HashUtil.womenActivityMergeKey(women.getFemaleWorkersProportionType(), women.getFemaleWorkersProportion(), women.getFemaleShareOfManager(), women.getGenderTotalOfManager(), women.getFemaleShareOfOfficers(), women.getGenderTotalOfOfficers());
+            String mergeKey = women.womenActivityMergeKey();
 
             buffer.womenActivity.writeRow(company.getCorporateNumber(), mergeKey, women.getFemaleWorkersProportionType(), women.getFemaleWorkersProportion(), women.getFemaleShareOfManager(), women.getGenderTotalOfManager(), women.getFemaleShareOfOfficers(), women.getGenderTotalOfOfficers());
         }
@@ -238,7 +237,7 @@ public class CopyInterceptor implements Interceptor {
     private void writeCompatibilityOfChildcareAndWork(StagingBuffer buffer, WorkplaceInfo workplaceInfo, GbizCompany company) throws IOException {
         CompatibilityOfChildcareAndWork compat = workplaceInfo.getCompatibilityOfChildcareAndWork();
         if (compat != null) {
-            String mergeKey = HashUtil.compatChildcareMergeKey(compat.getNumberOfPaternityLeave(), compat.getNumberOfMaternityLeave(), compat.getPaternityLeaveAcquisitionNum(), compat.getMaternityLeaveAcquisitionNum());
+            String mergeKey = compat.compatChildcareMergeKey();
 
             buffer.compatChildcare.writeRow(company.getCorporateNumber(), mergeKey, compat.getNumberOfPaternityLeave(), compat.getNumberOfMaternityLeave(), compat.getPaternityLeaveAcquisitionNum(), compat.getMaternityLeaveAcquisitionNum());
         }
@@ -251,7 +250,7 @@ public class CopyInterceptor implements Interceptor {
         }
 
         for (Finance finance : finances) {
-            String financeMergeKey = HashUtil.financeMergeKey(finance.getAccountingStandards(), finance.getFiscalYearCoverPage());
+            String financeMergeKey = finance.financeMergeKey();
 
             buffer.finance.writeRow(company.getCorporateNumber(), financeMergeKey, finance.getAccountingStandards(), finance.getFiscalYearCoverPage());
 
@@ -266,7 +265,7 @@ public class CopyInterceptor implements Interceptor {
         }
 
         for (MajorShareholders shareholder : finance.getMajorShareholders()) {
-            String mergeKey = HashUtil.shareholderMergeKey(shareholder.getNameMajorShareholders(), shareholder.getShareholdingRatio());
+            String mergeKey = shareholder.shareholderMergeKey();
 
             buffer.majorShareholder.writeRow(financeMergeKey, mergeKey, shareholder.getNameMajorShareholders(), shareholder.getShareholdingRatio());
         }
@@ -278,7 +277,7 @@ public class CopyInterceptor implements Interceptor {
         }
 
         for (ManagementIndex index : finance.getManagementIndex()) {
-            String mergeKey = HashUtil.managementIndexMergeKey(index.getPeriod(), index.getNetSalesSummaryOfBusinessResults(), index.getNetSalesSummaryOfBusinessResultsUnitRef(), index.getOperatingRevenue1SummaryOfBusinessResults(), index.getOperatingRevenue1SummaryOfBusinessResultsUnitRef(), index.getOperatingRevenue2SummaryOfBusinessResults(), index.getOperatingRevenue2SummaryOfBusinessResultsUnitRef(), index.getGrossOperatingRevenueSummaryOfBusinessResults(), index.getGrossOperatingRevenueSummaryOfBusinessResultsUnitRef(), index.getOrdinaryIncomeSummaryOfBusinessResults(), index.getOrdinaryIncomeSummaryOfBusinessResultsUnitRef(), index.getNetPremiumsWrittenSummaryOfBusinessResultIns(), index.getNetPremiumsWrittenSummaryOfBusinessResultsInsUnitRef(), index.getOrdinaryIncomeLossSummaryOfBusinessResults(), index.getOrdinaryIncomeLossSummaryOfBusinessResultsUnitRef(), index.getNetIncomeLossSummaryOfBusinessResults(), index.getNetIncomeLossSummaryOfBusinessResultsUnitRef(), index.getCapitalStockSummaryOfBusinessResults(), index.getCapitalStockSummaryOfBusinessResultsUnitRef(), index.getNetAssetsSummaryOfBusinessResults(), index.getNetAssetsSummaryOfBusinessResultsUnitRef(), index.getTotalAssetsSummaryOfBusinessResults(), index.getTotalAssetsSummaryOfBusinessResultsUnitRef(), index.getNumberOfEmployees(), index.getNumberOfEmployeesUnitRef());
+            String mergeKey = index.managementIndexMergeKey();
 
             buffer.managementIndex.writeRow(financeMergeKey, mergeKey, index.getPeriod(), index.getNetSalesSummaryOfBusinessResults(), index.getNetSalesSummaryOfBusinessResultsUnitRef(), index.getOperatingRevenue1SummaryOfBusinessResults(), index.getOperatingRevenue1SummaryOfBusinessResultsUnitRef(), index.getOperatingRevenue2SummaryOfBusinessResults(), index.getOperatingRevenue2SummaryOfBusinessResultsUnitRef(), index.getGrossOperatingRevenueSummaryOfBusinessResults(), index.getGrossOperatingRevenueSummaryOfBusinessResultsUnitRef(), index.getOrdinaryIncomeSummaryOfBusinessResults(), index.getOrdinaryIncomeSummaryOfBusinessResultsUnitRef(), index.getNetPremiumsWrittenSummaryOfBusinessResultIns(), index.getNetPremiumsWrittenSummaryOfBusinessResultsInsUnitRef(), index.getOrdinaryIncomeLossSummaryOfBusinessResults(), index.getOrdinaryIncomeLossSummaryOfBusinessResultsUnitRef(), index.getNetIncomeLossSummaryOfBusinessResults(), index.getNetIncomeLossSummaryOfBusinessResultsUnitRef(), index.getCapitalStockSummaryOfBusinessResults(), index.getCapitalStockSummaryOfBusinessResultsUnitRef(), index.getNetAssetsSummaryOfBusinessResults(), index.getNetAssetsSummaryOfBusinessResultsUnitRef(), index.getTotalAssetsSummaryOfBusinessResults(), index.getTotalAssetsSummaryOfBusinessResultsUnitRef(), index.getNumberOfEmployees(), index.getNumberOfEmployeesUnitRef());
         }

@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+import static com.java.gbizinfo.importer.util.HashUtil.mergeKey;
+import static com.java.gbizinfo.importer.util.HashUtil.normText;
+
 @Setter
 @Getter
 public class Classifications {
@@ -15,4 +18,8 @@ public class Classifications {
 
     @JsonProperty("日本語")
     private String japanese;
+
+    public String classificationMergeKey() {
+        return mergeKey(normText(this.codeValue), normText(this.codeName), normText(this.japanese));
+    }
 }

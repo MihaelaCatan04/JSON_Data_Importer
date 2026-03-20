@@ -6,6 +6,8 @@ import lombok.Setter;
 
 import java.util.List;
 
+import static com.java.gbizinfo.importer.util.HashUtil.*;
+
 @Setter
 @Getter
 public class Patent {
@@ -26,4 +28,8 @@ public class Patent {
 
     @JsonProperty("url")
     private String url;
+
+    public String patentMergeKey() {
+        return mergeKey(normText(this.patentType), normText(this.registrationNumber), normDate(this.applicationDate), normText(this.title), normText(this.url));
+    }
 }

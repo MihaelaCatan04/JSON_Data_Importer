@@ -6,6 +6,9 @@ import lombok.Setter;
 
 import java.util.List;
 
+import static com.java.gbizinfo.importer.util.HashUtil.mergeKey;
+import static com.java.gbizinfo.importer.util.HashUtil.normText;
+
 @Setter
 @Getter
 public class Finance {
@@ -20,4 +23,8 @@ public class Finance {
 
     @JsonProperty("major_shareholders")
     private List<MajorShareholders> majorShareholders;
+
+    public String financeMergeKey() {
+        return mergeKey(normText(this.accountingStandards), normText(this.fiscalYearCoverPage));
+    }
 }

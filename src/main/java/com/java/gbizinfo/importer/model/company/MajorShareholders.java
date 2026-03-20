@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+import static com.java.gbizinfo.importer.util.HashUtil.*;
+
 @Setter
 @Getter
 public class MajorShareholders {
@@ -12,4 +14,8 @@ public class MajorShareholders {
 
     @JsonProperty("shareholding_ratio")
     private Double shareholdingRatio;
+
+    public String shareholderMergeKey() {
+        return mergeKey(normText(this.nameMajorShareholders), normNumber(this.shareholdingRatio));
+    }
 }

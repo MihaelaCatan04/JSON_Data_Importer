@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+import static com.java.gbizinfo.importer.util.HashUtil.*;
+
 @Getter
 @Setter
 public class WomenActivityInfos {
@@ -24,4 +26,8 @@ public class WomenActivityInfos {
 
     @JsonProperty("gender_total_of_officers")
     private Integer genderTotalOfOfficers;
+
+    public String womenActivityMergeKey() {
+        return mergeKey(normText(this.femaleWorkersProportionType), normNumber(this.femaleWorkersProportion), normNumber(this.femaleShareOfManager), normNumber(this.genderTotalOfManager), normNumber(this.femaleShareOfOfficers), normNumber(this.genderTotalOfOfficers));
+    }
 }

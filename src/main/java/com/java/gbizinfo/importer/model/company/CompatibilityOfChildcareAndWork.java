@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+import static com.java.gbizinfo.importer.util.HashUtil.mergeKey;
+import static com.java.gbizinfo.importer.util.HashUtil.normInt;
+
 @Setter
 @Getter
 public class CompatibilityOfChildcareAndWork {
@@ -18,4 +21,8 @@ public class CompatibilityOfChildcareAndWork {
 
     @JsonProperty("maternity_leave_acquisition_num")
     private Integer maternityLeaveAcquisitionNum;
+
+    public String compatChildcareMergeKey() {
+        return mergeKey(normInt(this.numberOfPaternityLeave), normInt(this.numberOfMaternityLeave), normInt(this.paternityLeaveAcquisitionNum), normInt(this.maternityLeaveAcquisitionNum));
+    }
 }

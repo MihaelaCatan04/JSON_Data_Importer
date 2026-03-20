@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+import static com.java.gbizinfo.importer.util.HashUtil.*;
+
 @Setter
 @Getter
 public class BaseInfos {
@@ -24,4 +26,8 @@ public class BaseInfos {
 
     @JsonProperty("month_average_predetermined_overtime_hours")
     private Double monthAveragePredeterminedOvertimeHours;
+
+    public String baseInfoMergeKey() {
+        return mergeKey(normText(this.averageContinuousServiceYearsType), normNumber(this.averageContinuousServiceYearsMale), normNumber(averageContinuousServiceYearsFemale), normNumber(averageContinuousServiceYears), normNumber(averageAge), normNumber(monthAveragePredeterminedOvertimeHours));
+    }
 }

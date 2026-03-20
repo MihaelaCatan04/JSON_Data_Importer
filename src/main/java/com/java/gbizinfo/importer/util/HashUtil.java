@@ -38,13 +38,6 @@ public final class HashUtil {
         return normalized.isEmpty() ? NULL_TOKEN : normalized;
     }
 
-    public static String normBool(Boolean value) {
-        if (value == null) {
-            return NULL_TOKEN;
-        }
-        return value ? "true" : "false";
-    }
-
     public static String normInt(Integer value) {
         return value == null ? NULL_TOKEN : value.toString();
     }

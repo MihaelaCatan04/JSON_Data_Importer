@@ -27,9 +27,6 @@ import java.util.zip.ZipInputStream;
 @Log4j2
 @Service
 public class DataImporter {
-
-    private static final String URL = "https://info.gbiz.go.jp/hojin/Download";
-
     private static final String PARAMS_TEMPLATE = "apiToken=%s&downfile=Hojinjoho&meta=META&downenc=UTF-8&isZip=on&downtype=zip";
 
     private final DataMapper dataMapper;
@@ -40,6 +37,9 @@ public class DataImporter {
 
     @Value("${apiToken}")
     private String apiToken;
+
+    @Value("${app.importer.url}")
+    private String url;
 
     @Value("${local-path}")
     private String localPath;
@@ -212,7 +212,7 @@ public class DataImporter {
     }
 
     private HttpURLConnection openConnection() throws Exception {
-        HttpURLConnection connection = (HttpURLConnection) new URI(URL).toURL().openConnection();
+        HttpURLConnection connection = (HttpURLConnection) new URI(url).toURL().openConnection();
         connection.setRequestMethod("POST");
         connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");

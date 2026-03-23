@@ -474,7 +474,8 @@
                       ON i.merge_key = md5(norm_text(s.value) || '|' || norm_bool(s.is_industry))
         WHERE s.value IS NOT NULL
         ON CONFLICT (company_id, info_id)
-            DO UPDATE SET deleted = false
+            DO UPDATE SET deleted = false,
+                          updated_at = now()
         WHERE company_item.deleted = true
     </update>
 
@@ -485,7 +486,8 @@
                  JOIN company c ON c.corporate_number = s.corporate_number
                  JOIN patent p ON p.merge_key = s.merge_key
         ON CONFLICT (company_id, patent_id)
-            DO UPDATE SET deleted = false
+            DO UPDATE SET deleted = false,
+                          updated_at = now()
         WHERE company_patent.deleted = true
     </update>
 
@@ -496,7 +498,8 @@
                  JOIN patent p ON p.merge_key = s.patent_merge_key
                  JOIN classification c ON c.merge_key = s.merge_key
         ON CONFLICT (patent_id, classification_id)
-            DO UPDATE SET deleted = false
+            DO UPDATE SET deleted = false,
+                          updated_at = now()
         WHERE patent_classification.deleted = true
     </update>
 
@@ -507,7 +510,8 @@
                  JOIN company c ON c.corporate_number = s.corporate_number
                  JOIN certification e ON e.merge_key = s.merge_key
         ON CONFLICT (company_id, certification_id)
-            DO UPDATE SET deleted = false
+            DO UPDATE SET deleted = false,
+                          updated_at = now()
         WHERE company_certification.deleted = true
     </update>
 
@@ -518,7 +522,8 @@
                  JOIN company c ON c.corporate_number = s.corporate_number
                  JOIN subsidy s2 ON s2.merge_key = s.merge_key
         ON CONFLICT (company_id, subsidy_id)
-            DO UPDATE SET deleted = false
+            DO UPDATE SET deleted = false,
+                          updated_at = now()
         WHERE company_subsidy.deleted = true
     </update>
 
@@ -529,7 +534,8 @@
                  JOIN company c ON c.corporate_number = s.corporate_number
                  JOIN commendation e ON e.merge_key = s.merge_key
         ON CONFLICT (company_id, commendation_id)
-            DO UPDATE SET deleted = false
+            DO UPDATE SET deleted = false,
+                          updated_at = now()
         WHERE company_commendation.deleted = true
     </update>
 
@@ -540,7 +546,8 @@
                  JOIN company c ON c.corporate_number = s.corporate_number
                  JOIN procurement e ON e.merge_key = s.merge_key
         ON CONFLICT (company_id, procurement_id)
-            DO UPDATE SET deleted = false
+            DO UPDATE SET deleted = false,
+                          updated_at = now()
         WHERE company_procurement.deleted = true
     </update>
 
@@ -551,7 +558,8 @@
                  JOIN company c ON c.corporate_number = s.corporate_number
                  JOIN finance f ON f.merge_key = s.merge_key
         ON CONFLICT (company_id, finance_id)
-            DO UPDATE SET deleted = false
+            DO UPDATE SET deleted = false,
+                          updated_at = now()
         WHERE company_finance.deleted = true
     </update>
 
@@ -562,7 +570,8 @@
                  JOIN finance f ON f.merge_key = s.finance_merge_key
                  JOIN major_shareholder ms ON ms.merge_key = s.merge_key
         ON CONFLICT (finance_id, major_shareholder_id)
-            DO UPDATE SET deleted = false
+            DO UPDATE SET deleted = false,
+                          updated_at = now()
         WHERE finance_shareholder.deleted = true
     </update>
 
@@ -573,7 +582,8 @@
                  JOIN finance f ON f.merge_key = s.finance_merge_key
                  JOIN management_index m ON m.merge_key = s.merge_key
         ON CONFLICT (finance_id, management_index_id)
-            DO UPDATE SET deleted = false
+            DO UPDATE SET deleted = false,
+                          updated_at = now()
         WHERE finance_management.deleted = true
     </update>
 

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.java.gbizinfo.importer.mapper.ImportExecutionStateMapper">
+
+    <resultMap id="ImportExecutionStateResultMap" type="com.java.gbizinfo.importer.model.scheduler.ImportExecutionState">
+        <result property="windowKey" column="window_key"/>
+        <result property="windowDate" column="window_date"/>
+        <result property="running" column="running"/>
+        <result property="success" column="success"/>
+        <result property="insertedAt" column="inserted_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findByWindowKeyAndWindowDate" resultMap="ImportExecutionStateResultMap">
+        SELECT window_key, window_date, running, success, inserted_at, updated_at
+        FROM import_execution_state
+        WHERE window_key = #{windowKey}
+          AND window_date = #{windowDate}
+    </select>
+
+    <insert id="insert">
+        INSERT INTO import_execution_state (window_key,
+                                            window_date,
+                                            running,
+                                            success,
+                                            inserted_at)
+        VALUES (#{windowKey},
+                #{windowDate},
+                #{running},
+                #{success},
+                #{insertedAt})
+    </insert>
+
+    <update id="update">
+        UPDATE import_execution_state
+        SET running    = #{running},
+            success    = #{success},
+            updated_at = #{updatedAt}
+        WHERE window_key = #{windowKey}
+          AND window_date = #{windowDate}
+    </update>
+
+</mapper>

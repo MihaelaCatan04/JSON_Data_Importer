@@ -7,7 +7,8 @@
 
     <update id="deleteStaleCompanyItems">
         UPDATE company_item ci
-        SET deleted = true
+        SET deleted = true,
+            updated_at = now()
         WHERE ci.deleted = false
           AND ci.company_id IN (SELECT c.company_id
                                 FROM company c
@@ -23,7 +24,8 @@
 
     <update id="deleteStaleCompanyPatents">
         UPDATE company_patent cp
-        SET deleted = true
+        SET deleted = true,
+            updated_at = now()
         WHERE cp.deleted = false
           AND cp.company_id IN (
             SELECT c.company_id
@@ -42,7 +44,8 @@
 
     <update id="deleteStalePatentClassifications">
         UPDATE patent_classification pc
-        SET deleted = true
+        SET deleted = true,
+            updated_at = now()
         WHERE pc.deleted = false
           AND pc.patent_id IN (
             SELECT DISTINCT p.patent_id
@@ -61,7 +64,8 @@
 
     <update id="deleteStaleCertifications">
         UPDATE company_certification cc
-        SET deleted = true
+        SET deleted = true,
+            updated_at = now()
         WHERE cc.deleted = false
           AND cc.company_id IN (
             SELECT c.company_id
@@ -80,7 +84,8 @@
 
     <update id="deleteStaleSubsidies">
         UPDATE company_subsidy cs
-        SET deleted = true
+        SET deleted = true,
+            updated_at = now()
         WHERE cs.deleted = false
           AND cs.company_id IN (
             SELECT c.company_id
@@ -99,7 +104,8 @@
 
     <update id="deleteStaleCommendations">
         UPDATE company_commendation cc
-        SET deleted = true
+        SET deleted = true,
+            updated_at = now()
         WHERE cc.deleted = false
           AND cc.company_id IN (
             SELECT c.company_id
@@ -118,7 +124,8 @@
 
     <update id="deleteStaleProcurements">
         UPDATE company_procurement cp
-        SET deleted = true
+        SET deleted = true,
+            updated_at = now()
         WHERE cp.deleted = false
           AND cp.company_id IN (
             SELECT c.company_id
@@ -137,7 +144,8 @@
 
     <update id="deleteStaleFinances">
         UPDATE company_finance cf
-        SET deleted = true
+        SET deleted = true,
+            updated_at = now()
         WHERE cf.deleted = false
           AND cf.company_id IN (
             SELECT c.company_id
@@ -156,7 +164,8 @@
 
     <update id="deleteStaleFinanceShareholders">
         UPDATE finance_shareholder fs
-        SET deleted = true
+        SET deleted = true,
+            updated_at = now()
         WHERE fs.deleted = false
           AND fs.finance_id IN (
             SELECT DISTINCT f.finance_id
@@ -175,7 +184,8 @@
 
     <update id="deleteStaleFinanceManagement">
         UPDATE finance_management fm
-        SET deleted = true
+        SET deleted = true,
+            updated_at = now()
         WHERE fm.deleted = false
           AND fm.finance_id IN (
             SELECT DISTINCT f.finance_id

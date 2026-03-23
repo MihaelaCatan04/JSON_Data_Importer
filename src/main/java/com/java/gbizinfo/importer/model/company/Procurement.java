@@ -1,8 +1,13 @@
 package com.java.gbizinfo.importer.model.company;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.java.gbizinfo.importer.buffer.StagingBuffer;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.io.IOException;
+
+import static com.java.gbizinfo.importer.util.HashUtil.*;
 
 @Setter
 @Getter
@@ -21,4 +26,13 @@ public class Procurement {
 
     @JsonProperty("note")
     private String note;
+
+    public String procurementMergeKey() {
+        return mergeKey(normTimestamp(this.dateOfOrder), normText(this.title), normLong(this.amount), normText(this.governmentDepartments), normText(this.note));
+    }
+
+    public void writeProcurement(String corporateNumber) throws IOException {
+        String mergeKey = procurementMergeKey();
+        StagingBuffer.procurement.writeRow(corporateNumber, mergeKey, this.dateOfOrder, this.title, this.amount, this.governmentDepartments, this.note);
+    }
 }

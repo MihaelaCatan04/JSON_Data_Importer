@@ -1,8 +1,13 @@
 package com.java.gbizinfo.importer.model.company;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.java.gbizinfo.importer.buffer.StagingBuffer;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.io.IOException;
+
+import static com.java.gbizinfo.importer.util.HashUtil.*;
 
 @Setter
 @Getter
@@ -29,7 +34,7 @@ public class ManagementIndex {
     private String operatingRevenue2SummaryOfBusinessResultsUnitRef;
 
     @JsonProperty("gross_operating_revenue_summary_of_business_results")
-    private Long GrossOperatingRevenueSummaryOfBusinessResults;
+    private Long grossOperatingRevenueSummaryOfBusinessResults;
 
     @JsonProperty("gross_operating_revenue_summary_of_business_results_unit_ref")
     private String grossOperatingRevenueSummaryOfBusinessResultsUnitRef;
@@ -81,4 +86,13 @@ public class ManagementIndex {
 
     @JsonProperty("number_of_employees_unit_ref")
     private String numberOfEmployeesUnitRef;
+
+    public String managementIndexMergeKey() {
+        return mergeKey(normText(this.period), normLong(this.netSalesSummaryOfBusinessResults), normText(this.netSalesSummaryOfBusinessResultsUnitRef), normLong(this.operatingRevenue1SummaryOfBusinessResults), normText(this.operatingRevenue1SummaryOfBusinessResultsUnitRef), normLong(this.operatingRevenue2SummaryOfBusinessResults), normText(this.operatingRevenue1SummaryOfBusinessResultsUnitRef), normLong(this.grossOperatingRevenueSummaryOfBusinessResults), normText(this.grossOperatingRevenueSummaryOfBusinessResultsUnitRef), normLong(this.ordinaryIncomeSummaryOfBusinessResults), normText(this.ordinaryIncomeSummaryOfBusinessResultsUnitRef), normLong(this.netPremiumsWrittenSummaryOfBusinessResultIns), normText(this.netPremiumsWrittenSummaryOfBusinessResultsInsUnitRef), normLong(this.ordinaryIncomeLossSummaryOfBusinessResults), normText(this.ordinaryIncomeSummaryOfBusinessResultsUnitRef), normLong(this.netIncomeLossSummaryOfBusinessResults), normText(this.netIncomeLossSummaryOfBusinessResultsUnitRef), normLong(this.capitalStockSummaryOfBusinessResults), normText(this.capitalStockSummaryOfBusinessResultsUnitRef), normLong(this.netAssetsSummaryOfBusinessResults), normText(this.netAssetsSummaryOfBusinessResultsUnitRef), normLong(this.totalAssetsSummaryOfBusinessResults), normText(this.totalAssetsSummaryOfBusinessResultsUnitRef), normLong(this.numberOfEmployees), normText(this.numberOfEmployeesUnitRef));
+    }
+
+    public void writeManagementIndex(String financeMergeKey) throws IOException {
+        String mergeKey = managementIndexMergeKey();
+        StagingBuffer.managementIndex.writeRow(financeMergeKey, mergeKey, this.period, this.netSalesSummaryOfBusinessResults, this.netSalesSummaryOfBusinessResultsUnitRef, this.operatingRevenue1SummaryOfBusinessResults, this.operatingRevenue1SummaryOfBusinessResultsUnitRef, this.operatingRevenue2SummaryOfBusinessResults, this.operatingRevenue2SummaryOfBusinessResultsUnitRef, this.grossOperatingRevenueSummaryOfBusinessResults, this.grossOperatingRevenueSummaryOfBusinessResultsUnitRef, this.ordinaryIncomeSummaryOfBusinessResults, this.ordinaryIncomeSummaryOfBusinessResultsUnitRef, this.netPremiumsWrittenSummaryOfBusinessResultIns, this.netPremiumsWrittenSummaryOfBusinessResultsInsUnitRef, this.ordinaryIncomeLossSummaryOfBusinessResults, this.ordinaryIncomeLossSummaryOfBusinessResultsUnitRef, this.netIncomeLossSummaryOfBusinessResults, this.netIncomeLossSummaryOfBusinessResultsUnitRef, this.capitalStockSummaryOfBusinessResults, this.capitalStockSummaryOfBusinessResultsUnitRef, this.netAssetsSummaryOfBusinessResults, this.netAssetsSummaryOfBusinessResultsUnitRef, this.totalAssetsSummaryOfBusinessResults, this.totalAssetsSummaryOfBusinessResultsUnitRef, this.numberOfEmployees, this.numberOfEmployeesUnitRef);
+    }
 }
